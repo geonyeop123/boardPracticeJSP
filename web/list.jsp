@@ -32,7 +32,7 @@
     ResultSet rs = null;
     String SQL = null;
     int pag2 = intCheck(request.getParameter("page")) == false ? 1 : Integer.parseInt(request.getParameter("page"));
-    int pageSize = intCheck(request.getParameter("pageSize")) == false ? 1 : Integer.parseInt(request.getParameter("pageSize"));
+    int pageSize = intCheck(request.getParameter("pageSize")) == false ? 10 : Integer.parseInt(request.getParameter("pageSize"));
     int totalCnt = 0;
     int naviSize = 10;
     int startPage = 0;
@@ -41,6 +41,7 @@
     int boardStartNumber = 0;
     boolean prev = false;
     boolean next = false;
+    String active = "";
 
     try{
         Class.forName(DRIVER);
@@ -54,14 +55,17 @@
         SQL = "SELECT COUNT(*) FROM TBL_BOARD WHERE blind_yn = 'N'";
         pstmt = con.prepareStatement(SQL);
         rs = pstmt.executeQuery();
-        totalCnt = rs.getInt(1);
+        if(rs.next())totalCnt = rs.getInt(1);
+        System.out.println(totalCnt);
         if(totalCnt != 0){
-            startPage = (pag2 - 1) * pageSize + 1;
-            finalEndPage = (int)Math.ceil(((double)totalCnt / pageSize));
-            endPage = startPage + pageSize - 1 > finalEndPage ? finalEndPage : startPage + pageSize - 1;
+            startPage = (pag2 - 1) / naviSize * naviSize + 1;
+            finalEndPage = (int)Math.ceil(((double)totalCnt / naviSize));
+            endPage = startPage + naviSize - 1 > finalEndPage ? finalEndPage : startPage + pageSize - 1;
             boardStartNumber = totalCnt - (pag2 - 1) * pageSize;
             prev = startPage != 1 ? true : false;
             next = endPage < finalEndPage ? true : false;
+            System.out.println("startPage : " + startPage);
+            System.out.println("endPage : " + endPage);
         }
         pstmt.clearParameters();
     }catch(Exception e){
@@ -70,11 +74,11 @@
     }
     if(totalCnt != 0){
         try{
-            SQL = "SELECT bno, title, writer, regdate" +
+            SQL = "SELECT bno, title, writer, regdate\n " +
                     "FROM tbl_board\n" +
                     "WHERE 1=1\n" +
                     "AND blind_yn = 'N'\n" +
-                    "ORDER BY ref DESC, depth ASC" +
+                    "ORDER BY ref DESC, depth ASC\n" +
                     "LIMIT " + ((pag2 - 1) * pageSize) + ", " + pageSize ;
             pstmt = con.prepareStatement(SQL);
             rs = pstmt.executeQuery();
@@ -121,22 +125,41 @@
                 </tr>
                 </thead>
                 <tbody>
-                    <%
-                        if(rs.next()){
-                            rs.getInt(1)
-                        }
-                    %>
+                <%
+                    if(totalCnt != 0){
+                        while(rs.next()){
+                %>
                 <tr>
-                    <th scope="row">2</th>
-                    <td class="table_title">하이요</td>
-                    <td>yeop</td>
-                    <td>2021.01.12</td>
+                    <th scope="row"><%=rs.getInt(1)%></th>
+                    <td class="table_title"><%=rs.getString(2)%></td>
+                    <td><%=rs.getString(3)%></td>
+                    <td><%=rs.getString(4)%></td>
                 </tr>
+                    <% }
+                    }else{
+                        %>
+                <tr><td colspan="7" class="center_txt">게시물이 없습니다.</td></tr>
+                <% }%>
                 </tbody>
             </table>
                     </div>
                 </div>
-
+            <% if(totalCnt != 0){%>
+            <div class="page_wrap">
+                <div class="page_nation">
+                    <% if(prev){ %>
+                    <a class="arrow prev" href="./list.jsp?page=<%=startPage - 1%>&pageSize=<%=pageSize%>">&lt;</a>
+                    <% }%>
+                    <% for(int i = startPage; i <= endPage; i++){
+                        if(i == pag2) active = "active";%>
+                    <a class="<%=active%>" href="./list.jsp?page=<%=i%>&pageSize=<%=pageSize%>"><%=i%></a>
+                    <% } %>
+                    <% if(next){ %>
+                    <a class="arrow next" href="./list.jsp?page=<%=endPage - 1%>&pageSize=<%=pageSize%>">&gt;</a>
+                    <% }%>
+                </div>
+            </div>
+            <%}%>
         </div>
     </div>
     <script>
