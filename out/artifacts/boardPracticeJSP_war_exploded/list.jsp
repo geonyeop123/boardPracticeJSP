@@ -64,8 +64,6 @@
             boardStartNumber = totalCnt - (pag2 - 1) * pageSize;
             prev = startPage != 1 ? true : false;
             next = endPage < finalEndPage ? true : false;
-            System.out.println("startPage : " + startPage);
-            System.out.println("endPage : " + endPage);
         }
         pstmt.clearParameters();
     }catch(Exception e){
@@ -131,7 +129,7 @@
                 %>
                 <tr>
                     <th scope="row"><%=rs.getInt(1)%></th>
-                    <td class="table_title"><%=rs.getString(2)%></td>
+                    <td class="table_title"><a href="./board.jsp?page=<%=pag2%>&pageSize=<%=pageSize%>&bno=<%=rs.getInt(1)%>&action=MOD"><%=rs.getString(2)%></a></td>
                     <td><%=rs.getString(3)%></td>
                     <td><%=rs.getString(4)%></td>
                 </tr>
@@ -162,11 +160,20 @@
             <%}%>
         </div>
     </div>
+    <%
+        try{
+            if(rs !=null) rs.close();
+            if(pstmt !=null) pstmt.close();
+            if(con !=null) con.close();
+        }catch(Exception e){
+            e.printStackTrace();
+        }
+    %>
     <script>
         $(document).ready(function(){
 
             $("#write_btn").on("click",function(){
-                location.href='<c:url value="/board/write?page=${boardVO.pageMaker.page}&pageSize=${boardVO.pageMaker.pageSize}&action=WRT"/>';
+                location.href='./board.jsp?page=${boardVO.pageMaker.page}&pageSize=${boardVO.pageMaker.pageSize}&action=WRT';
             })
         })
     </script>

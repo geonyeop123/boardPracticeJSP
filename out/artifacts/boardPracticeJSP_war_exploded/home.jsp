@@ -18,8 +18,8 @@
 <div class="header">
 	<div class="logo">LOGO</div>
 	<div class="navi">
-		<a class="home navi_contents active" href='<c:url value="/"/>'><div>HOME</div></a>
-		<a class="board navi_contents" href='<c:url value="/board/list"/>'><div>BOARD</div></a>
+		<a class="home navi_contents" href='./home.jsp'><div>HOME</div></a>
+		<a class="board navi_contents active" href='./list.jsp'><div>BOARD</div></a>
 		<a class="login navi_contents" href="#"><div>LOGIN</div></a>
 	</div>
 </div>
