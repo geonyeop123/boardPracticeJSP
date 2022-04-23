@@ -55,14 +55,16 @@
         String content = "";
         String message = null;
 
-        System.out.println(request.getParameter("bno"));
-        System.out.println(request.getParameter("action"));
-        System.out.println(Arrays.asList(actions).contains(request.getParameter("action")));
+
+
         if(request.getParameter("action") == null || !Arrays.asList(actions).contains(request.getParameter("action"))){
             message = "ERR_Path";
         }else{
             action = "".equals(request.getParameter("action")) ? "WRT" : request.getParameter("action");
             titleHTML = "MOD".equals(action) ? "글 수정" : "글 작성";
+            pag2 = Integer.parseInt(request.getParameter("page"));
+            pageSize = Integer.parseInt(request.getParameter("pageSize"));
+
             if("MOD".equals(action)){
                 bno = intCheck(request.getParameter("bno")) == true ? Integer.parseInt(request.getParameter("bno")) : 0;
                 if(bno == 0) message="ERR_Path";
@@ -150,7 +152,7 @@
             })
 
             $("#list").on("click", function(){
-                location.href='./list.jsp?page=${boardVO.page}&pageSize=${boardVO.pageSize}"/>';
+                location.href='./list.jsp?page=<%=pag2%>&pageSize=<%=pageSize%>"/>';
             })
 
             $("#delete").on("click", function(){
