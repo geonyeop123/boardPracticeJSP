@@ -13,8 +13,8 @@
 <html>
 <head>
     <title>BOARD</title>
-    <link rel="stylesheet" href="/css/style.css">
-    <link rel="stylesheet" href="/css/reset.css">
+    <link rel="stylesheet" href="./static/css/style.css">
+    <link rel="stylesheet" href="./static/css/reset.css">
     <script src="https://code.jquery.com/jquery-1.11.3.js"></script>
 </head>
 <body>
@@ -64,10 +64,11 @@
             titleHTML = "MOD".equals(action) ? "글 수정" : "글 작성";
             pag2 = Integer.parseInt(request.getParameter("page"));
             pageSize = Integer.parseInt(request.getParameter("pageSize"));
-
-            if("MOD".equals(action)){
+            if(!"WRT".equals(action)){
                 bno = intCheck(request.getParameter("bno")) == true ? Integer.parseInt(request.getParameter("bno")) : 0;
                 if(bno == 0) message="ERR_Path";
+            }
+            if("MOD".equals(action)){
                 try{
                     Class.forName(DRIVER);
                     con = DriverManager.getConnection(URL, USER, PW);
@@ -152,7 +153,7 @@
             })
 
             $("#list").on("click", function(){
-                location.href='./list.jsp?page=<%=pag2%>&pageSize=<%=pageSize%>"/>';
+                location.href='./list.jsp?page=<%=pag2%>&pageSize=<%=pageSize%>';
             })
 
             $("#delete").on("click", function(){

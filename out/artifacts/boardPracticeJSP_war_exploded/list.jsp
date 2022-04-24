@@ -42,7 +42,7 @@
     boolean prev = false;
     boolean next = false;
     String active = "";
-
+    String repTitle = "";
     try{
         Class.forName(DRIVER);
         con = DriverManager.getConnection(URL, USER, PW);
@@ -72,7 +72,7 @@
     }
     if(totalCnt != 0){
         try{
-            SQL = "SELECT bno, title, writer, regdate\n " +
+            SQL = "SELECT bno, step, title, writer, regdate  \n " +
                     "FROM tbl_board\n" +
                     "WHERE 1=1\n" +
                     "AND blind_yn = 'N'\n" +
@@ -129,9 +129,20 @@
                 %>
                 <tr>
                     <th scope="row"><%=rs.getInt(1)%></th>
-                    <td class="table_title"><a href="./board.jsp?page=<%=pag2%>&pageSize=<%=pageSize%>&bno=<%=rs.getInt(1)%>&action=MOD"><%=rs.getString(2)%></a></td>
-                    <td><%=rs.getString(3)%></td>
+                    <td class="table_title">
+                        <a href="./board.jsp?page=<%=pag2%>&pageSize=<%=pageSize%>&bno=<%=rs.getInt(1)%>&action=MOD">
+                        <%  if(rs.getInt(2) != 0) {
+                            for(int i = 0; i < rs.getInt(2);i++) repTitle += "&nbsp;&nbsp;&nbsp;";
+                        %>
+                            <span class="reply_tag"><%=repTitle%>Re :</span>
+                        <%
+                            repTitle = "";}
+                        %>
+                            <%=rs.getString(3)%>
+                        </a>
+                    </td>
                     <td><%=rs.getString(4)%></td>
+                    <td><%=rs.getString(5)%></td>
                 </tr>
                     <% }
                     }else{
@@ -173,7 +184,7 @@
         $(document).ready(function(){
 
             $("#write_btn").on("click",function(){
-                location.href='./board.jsp?page=${boardVO.pageMaker.page}&pageSize=${boardVO.pageMaker.pageSize}&action=WRT';
+                location.href='./board.jsp?page=<%=pag2%>&pageSize=<%=pageSize%>&action=WRT';
             })
         })
     </script>

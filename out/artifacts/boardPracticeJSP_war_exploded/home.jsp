@@ -11,8 +11,8 @@
 <html>
 <head>
 	<title>BOARD</title>
-	<link rel="stylesheet" href="/css/style.css">
-	<link rel="stylesheet" href="/css/reset.css">
+	<link rel="stylesheet" href="./static/css/style.css">
+	<link rel="stylesheet" href="./static/css/reset.css">
 </head>
 <body>
 <div class="header">
