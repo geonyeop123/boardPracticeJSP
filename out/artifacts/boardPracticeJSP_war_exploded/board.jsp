@@ -90,11 +90,6 @@
             }
         }
     %>
-    <%if(message !=""){%>
-    <script>
-        location.href="proc.jsp?message=" + message;
-    </script>
-    <%}%>
     <div class="header">
         <div class="logo">LOGO</div>
         <div class="navi">
@@ -138,18 +133,37 @@
     </div>
     <script>
         $(document).ready(function(){
-
+            const bno = $("#bno").val();
+            const action = $("#actionInput").val();
+            let requestJSON = {};
+            let message = "";
             $("#write").on("click", function(){
                 let form = $("#form");
                 const title = $("#title").val().trim();
                 const content = $("#content").val().trim();
+                console.log(requestJSON);
                 if(title == "" || content == "") {
                     alert("제목 혹은 본문 내용은 필수입니다.");
                     return;
                 }
-                form.attr('action', './proc.jsp');
-                form.attr('method', 'post');
-                form.submit();
+                $.ajax({
+                    type : 'POST',
+                    url : 'proc.jsp',
+                    header : {"content-type" : "application/json"},
+                    data : {
+                        action : action,
+                        title : title,
+                        content : content
+                    },
+                    dataType : "text",
+                    success : function(result){
+                        message = JSON.parse(result).message;
+                        alert(message);
+                    },
+                    error: function( request, status, error ){
+                        console.log("status : " + request.status + ", message : " + request.responseText + ", error : " + error);
+                    }
+                });
             })
 
             $("#list").on("click", function(){

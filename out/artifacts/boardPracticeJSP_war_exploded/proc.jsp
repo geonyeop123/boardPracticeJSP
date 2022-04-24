@@ -2,7 +2,9 @@
 <%@ page import="java.sql.ResultSet" %>
 <%@ page import="java.sql.Connection" %>
 <%@ page import="java.util.Arrays" %>
-<%@ page import="java.sql.DriverManager" %><%--
+<%@ page import="java.sql.DriverManager" %>
+<%@ page import="org.json.simple.JSONObject" %>
+<%@ page import="java.io.PrintWriter" %><%--
   Created by IntelliJ IDEA.
   User: yeop
   Date: 2022/04/09
@@ -46,20 +48,19 @@
 
         // VO
         String[] actions = {"WRT", "MOD", "DEL", "REP"};
-        int pag2 = 0;
-        int pageSize = 0;
         String action = "";
         int bno = 0;
         String title = "";
         String content = "";
         String message = null;
+        JSONObject object = new JSONObject();
+        PrintWriter prw = response.getWriter();
+        response.setContentType("application/json;charset=utf-8");
 
         int parentRef = 0;
         int parentStep = 0;
         int parentDepth = 0;
 
-        pag2 = Integer.parseInt(request.getParameter("page"));
-        pageSize = Integer.parseInt(request.getParameter("pageSize"));
 
         action = Arrays.asList(actions).contains(request.getParameter("action")) ? request.getParameter("action") : null;
         if(action == null){
@@ -159,67 +160,69 @@
                 e.printStackTrace();
             }
         }
+        System.out.println(message);
+        String st = "{\"message\":" +"\"" + message + "\""+ "}";
+        prw.println(st);
+        prw.close();
+
 
     %>
-    <script>
-        $(document).ready(function(){
-            // #####
-            // # 변수 선언
-            // #####
+<%--    <script>--%>
+<%--        $(document).ready(function(){--%>
+<%--            // #####--%>
+<%--            // # 변수 선언--%>
+<%--            // #####--%>
 
-            const action_type = {
-                "WRT" : "등록",
-                "MOD" : "수정",
-                "DEL" : "삭제",
-                "REP" : "답글 등록"
-            }
-            const action = '<%=action%>';
-            const msg = '<%=message%>';
-            // ERR_NoBoard -> NoBoard
-            const code_name = msg.substring(4);
-            // ERR_NoBoard -> ERR
-            const code_type = msg.substring(0, 3);
-            console.log("msg : " + msg);
-            console.log("code_name : " + code_name);
-            console.log("code_type : " + code_type);
-            // 유효성 검사
-            if(msg == "" || action == ""){
-                alert("잘못된 접근입니다.");
-                location.href="./home.jsp";
-                return;
-            }
-            // 코드가 ERR일 시
-            if(code_type == "ERR"){
-                if(code_name == "NoBoard"){
-                    alert("존재하지 않는 게시물입니다.");
-                    location.href ='./list.jsp?page=<%=pag2%>&pageSize=<%=pageSize%>';
-                }else if(code_name == "Path"){
-                    alert("올바른 경로로 접근하세요.");
-                    location.href = "./home.jsp";
-                }else if(code_name == "HaveRep"){
-                    alert("답글이 있는 경우 삭제할 수 없습니다.");
-                    location.href = './board.jsp?page=<%=pag2%>&pageSize=<%=pageSize%>&bno=<%=bno%>&action=MOD';
-                // action 에러인 경우
-                }else{
-                    alert(action_type[code_name] + "도중 에러가 발생했습니다.");
-                    <% action = "DEL".equals(action) ? "MOD" : action; %>
-                    location.href='./board.jsp?page=<%=pag2%>&pageSize=<%=pageSize%>&bno=<%=bno%>&title=<%=title%>&content=<%=content%>&action=<%=action%>';
-                }
-            // 코드가 SUC일 시
-            }else{
-                alert("성공적으로 " + action_type[code_name] + "되었습니다.");
-                // WRT일 시
-                if(code_name == "WRT"){
-                    location.href = "./list.jsp";
-                // MOD일 시
-                }else if(code_name == "MOD"){
-                    location.href = './board.jsp?page=<%=pag2%>&pageSize=<%=pageSize%>&bno=<%=bno%>&action=MOD';
-                // DEL, REP일 시
-                }else{
-                    location.href = './list.jsp?page=<%=pag2%>&pageSize=<%=pageSize%>';
-                }
-            }
-        })
-    </script>
+<%--            const action_type = {--%>
+<%--                "WRT" : "등록",--%>
+<%--                "MOD" : "수정",--%>
+<%--                "DEL" : "삭제",--%>
+<%--                "REP" : "답글 등록"--%>
+<%--            }--%>
+<%--            const action = '<%=action%>';--%>
+<%--            const msg = '<%=message%>';--%>
+<%--            // ERR_NoBoard -> NoBoard--%>
+<%--            const code_name = msg.substring(4);--%>
+<%--            // ERR_NoBoard -> ERR--%>
+<%--            const code_type = msg.substring(0, 3);--%>
+<%--            // 유효성 검사--%>
+<%--            if(msg == "" || action == ""){--%>
+<%--                alert("잘못된 접근입니다.");--%>
+<%--                location.href="./home.jsp";--%>
+<%--                return;--%>
+<%--            }--%>
+<%--            // 코드가 ERR일 시--%>
+<%--            if(code_type == "ERR"){--%>
+<%--                if(code_name == "NoBoard"){--%>
+<%--                    alert("존재하지 않는 게시물입니다.");--%>
+<%--                    location.href ='./list.jsp?page=<%=pag2%>&pageSize=<%=pageSize%>';--%>
+<%--                }else if(code_name == "Path"){--%>
+<%--                    alert("올바른 경로로 접근하세요.");--%>
+<%--                    location.href = "./home.jsp";--%>
+<%--                }else if(code_name == "HaveRep"){--%>
+<%--                    alert("답글이 있는 경우 삭제할 수 없습니다.");--%>
+<%--                    location.href = './board.jsp?page=<%=pag2%>&pageSize=<%=pageSize%>&bno=<%=bno%>&action=MOD';--%>
+<%--                // action 에러인 경우--%>
+<%--                }else{--%>
+<%--                    alert(action_type[code_name] + "도중 에러가 발생했습니다.");--%>
+<%--                    <% action = "DEL".equals(action) ? "MOD" : action; %>--%>
+<%--                    location.href='./board.jsp?page=<%=pag2%>&pageSize=<%=pageSize%>&bno=<%=bno%>&title=<%=title%>&content=<%=content%>&action=<%=action%>';--%>
+<%--                }--%>
+<%--            // 코드가 SUC일 시--%>
+<%--            }else{--%>
+<%--                alert("성공적으로 " + action_type[code_name] + "되었습니다.");--%>
+<%--                // WRT일 시--%>
+<%--                if(code_name == "WRT"){--%>
+<%--                    location.href = "./list.jsp";--%>
+<%--                // MOD일 시--%>
+<%--                }else if(code_name == "MOD"){--%>
+<%--                    location.href = './board.jsp?page=<%=pag2%>&pageSize=<%=pageSize%>&bno=<%=bno%>&action=MOD';--%>
+<%--                // DEL, REP일 시--%>
+<%--                }else{--%>
+<%--                    location.href = './list.jsp?page=<%=pag2%>&pageSize=<%=pageSize%>';--%>
+<%--                }--%>
+<%--            }--%>
+<%--        })--%>
+<%--    </script>--%>
 </body>
 </html>
