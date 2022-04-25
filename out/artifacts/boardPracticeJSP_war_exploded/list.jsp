@@ -23,15 +23,18 @@
     }
 %>
 <%
+    // DB
     final String DRIVER = "com.mysql.cj.jdbc.Driver";
     final String URL = "jdbc:mysql://127.0.0.1:3306/book_ex?useSSL=false";
     final String USER = "root";
-//    final String PW = "rjsduq!1";
-    final String PW = "1234";
+    final String PW = "rjsduq!1";
+//    final String PW = "1234";
     Connection con = null;
     PreparedStatement pstmt = null;
     ResultSet rs = null;
     String SQL = null;
+
+    // Paging
     int pag2 = intCheck(request.getParameter("page")) == false ? 1 : Integer.parseInt(request.getParameter("page"));
     int pageSize = intCheck(request.getParameter("pageSize")) == false ? 10 : Integer.parseInt(request.getParameter("pageSize"));
     int totalCnt = 0;
@@ -42,8 +45,12 @@
     int boardStartNumber = 0;
     boolean prev = false;
     boolean next = false;
+
+    // HTML
     String active = "";
     String repTitle = "";
+
+
     try{
         Class.forName(DRIVER);
         con = DriverManager.getConnection(URL, USER, PW);
@@ -126,10 +133,12 @@
                 <tbody>
                 <%
                     if(totalCnt != 0){
+                        int j = 0;
                         while(rs.next()){
+                            System.out.println("j = " + j);
                 %>
                 <tr>
-                    <th scope="row"><%=rs.getInt(1)%></th>
+                    <th scope="row"><%=(boardStartNumber - j)%></th>
                     <td class="table_title">
                         <a href="./board.jsp?page=<%=pag2%>&pageSize=<%=pageSize%>&bno=<%=rs.getInt(1)%>&action=MOD">
                         <%  if(rs.getInt(2) != 0) {
@@ -145,7 +154,9 @@
                     <td><%=rs.getString(4)%></td>
                     <td><%=rs.getString(5)%></td>
                 </tr>
-                    <% }
+                    <%
+                        j++;
+                        }
                     }else{
                         %>
                 <tr><td colspan="7" class="center_txt">게시물이 없습니다.</td></tr>
@@ -163,7 +174,10 @@
                     <% for(int i = startPage; i <= endPage; i++){
                         if(i == pag2) active = "active";%>
                     <a class="<%=active%>" href="./list.jsp?page=<%=i%>&pageSize=<%=pageSize%>"><%=i%></a>
-                    <% } %>
+                    <%
+                        active = "";
+                        }
+                    %>
                     <% if(next){ %>
                     <a class="arrow next" href="./list.jsp?page=<%=endPage - 1%>&pageSize=<%=pageSize%>">&gt;</a>
                     <% }%>

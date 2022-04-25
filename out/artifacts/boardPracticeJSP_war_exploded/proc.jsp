@@ -35,8 +35,8 @@
         final String DRIVER = "com.mysql.cj.jdbc.Driver";
         final String URL = "jdbc:mysql://127.0.0.1:3306/book_ex?useSSL=false";
         final String USER = "root";
-//    final String PW = "rjsduq!1";
-        final String PW = "1234";
+    final String PW = "rjsduq!1";
+//        final String PW = "1234";
         // html
         String titleHTML = "";
 
@@ -53,7 +53,7 @@
         int bno = 0;
         String title = "";
         String content = "";
-        String message = null;
+        String message = "";
         PrintWriter prw = response.getWriter();
         response.setContentType("application/json;charset=utf-8");
 
@@ -65,11 +65,11 @@
         action = Arrays.asList(actions).contains(request.getParameter("action")) ? request.getParameter("action") : null;
         if(action == null){
             message = "ERR_Path";
-        }else{
-            try{
+        }else {
+            try {
                 Class.forName(DRIVER);
                 con = DriverManager.getConnection(URL, USER, PW);
-            }catch(Exception e){
+            } catch (Exception e) {
                 System.out.println("Connection error");
                 e.printStackTrace();
             }
@@ -84,14 +84,14 @@
                     pstmt.setString(2, content);
                     resultCnt = pstmt.executeUpdate();
                     message = resultCnt == 1 ? "SUC_WRT" : "ERR_WRT";
-                }else {
-                    if(intCheck(request.getParameter("bno"))){
+                } else {
+                    if (intCheck(request.getParameter("bno"))) {
                         bno = Integer.parseInt(request.getParameter("bno"));
                         System.out.println("bno = " + bno);
-                    }else{
+                    } else {
                         message = "ERR_Path";
                     }
-                    if(message==null){
+                    if ("".equals(message)) {
                         SQL = "SELECT ref, step, depth " +
                                 "FROM TBL_BOARD " +
                                 "WHERE blind_yn = 'N' " +
@@ -103,7 +103,10 @@
                         parentRef = rs.getInt(1);
                         parentStep = rs.getInt(2);
                         parentDepth = rs.getInt(3);
-
+                        System.out.println("bno : " + bno);
+                        System.out.println("parentRef : " + parentRef);
+                        System.out.println("parentStep : " + parentStep);
+                        System.out.println("parentDepth : " + parentDepth);
                         pstmt.clearParameters();
                         if ("".equals(message)) {
                             if ("MOD".equals(action)) {
@@ -115,47 +118,50 @@
                                 pstmt.setInt(3, bno);
                                 resultCnt = pstmt.executeUpdate();
                                 message = resultCnt == 0 ? "ERR_MOD" : "SUC_MOD";
-                            }else if("DEL".equals(action)){
+                            } else if ("DEL".equals(action)) {
                                 // 답글이 있는지 확인
                                 SQL = "SELECT count(*)\n" +
                                         "FROM tbl_board\n" +
                                         "WHERE ref = " + parentRef + "\n" +
-                                        "AND step > " +parentStep + "\n" +
-                                        "AND depth = " + parentDepth+1;
+                                        "AND step > " + parentStep + "\n" +
+                                        "AND depth = " + (parentDepth + 1);
                                 pstmt = con.prepareStatement(SQL);
                                 rs = pstmt.executeQuery();
-                                if(rs.next()) if(rs.getInt(1) != 0){
-                                    message = "ERR_HaveRep";
-                                }else{
-                                    pstmt.clearParameters();
-                                    SQL = "UPDATE TBL_BOARD SET blind_yn = 'Y' \n" +
-                                          "WHERE bno = " + bno;
-                                    pstmt = con.prepareStatement(SQL);
-                                    resultCnt = pstmt.executeUpdate();
-                                    message = resultCnt == 0 ? "ERR_DEL" : "SUC_DEL";
+                                if (rs.next()) {
+                                    System.out.println("rs.getInt(1) = " + rs.getInt(1));
+                                    if (rs.getInt(1) != 0) {
+                                        message = "ERR_HaveRep";
+                                    }else {
+                                        pstmt.clearParameters();
+                                        SQL = "UPDATE TBL_BOARD SET blind_yn = 'Y' \n" +
+                                                "WHERE bno = " + bno;
+                                        pstmt = con.prepareStatement(SQL);
+                                        resultCnt = pstmt.executeUpdate();
+                                        message = resultCnt == 0 ? "ERR_DEL" : "SUC_DEL";
+                                    }
                                 }
-                            }else if("REP".equals(action)){
-                                SQL = "UPDATE TBL_BOARD SET depth = depth + 1 \n" +
-                                      "WHERE ref = " + parentRef + "\n" +
-                                      "AND depth > " + parentDepth;
-                                pstmt = con.prepareStatement(SQL);
-                                resultCnt = pstmt.executeUpdate();
-                                pstmt.clearParameters();
-                                SQL = "INSERT INTO TBL_BOARD(ref, step, depth, title, content, writer)" +
-                                      "VALUES( ?, ?, ?, ?, ?, ?)";
-                                pstmt= con.prepareStatement(SQL);
-                                pstmt.setInt(1, parentRef);
-                                pstmt.setInt(2, parentStep + 1);
-                                pstmt.setInt(3, parentDepth + 1);
-                                pstmt.setString(4, title);
-                                pstmt.setString(5, content);
-                                pstmt.setString(6, "yeop");
-                                resultCnt = pstmt.executeUpdate();
-                                message = resultCnt < 0 ? "ERR_REP" : "SUC_REP";
-                            }
+                        } else if ("REP".equals(action)) {
+                            SQL = "UPDATE TBL_BOARD SET depth = depth + 1 \n" +
+                                    "WHERE ref = " + parentRef + "\n" +
+                                    "AND depth > " + parentDepth;
+                            pstmt = con.prepareStatement(SQL);
+                            resultCnt = pstmt.executeUpdate();
+                            pstmt.clearParameters();
+                            SQL = "INSERT INTO TBL_BOARD(ref, step, depth, title, content, writer)" +
+                                    "VALUES( ?, ?, ?, ?, ?, ?)";
+                            pstmt = con.prepareStatement(SQL);
+                            pstmt.setInt(1, parentRef);
+                            pstmt.setInt(2, parentStep + 1);
+                            pstmt.setInt(3, parentDepth + 1);
+                            pstmt.setString(4, title);
+                            pstmt.setString(5, content);
+                            pstmt.setString(6, "yeop");
+                            resultCnt = pstmt.executeUpdate();
+                            message = resultCnt < 0 ? "ERR_REP" : "SUC_REP";
                         }
                     }
                 }
+            }
             }catch(Exception e){
                 e.printStackTrace();
             }
@@ -163,65 +169,6 @@
         String json = "{\"message\":" +"\"" + message + "\""+ "}";
         prw.println(json);
         prw.close();
-
-
     %>
-<%--    <script>--%>
-<%--        $(document).ready(function(){--%>
-<%--            // #####--%>
-<%--            // # 변수 선언--%>
-<%--            // #####--%>
-
-<%--            const action_type = {--%>
-<%--                "WRT" : "등록",--%>
-<%--                "MOD" : "수정",--%>
-<%--                "DEL" : "삭제",--%>
-<%--                "REP" : "답글 등록"--%>
-<%--            }--%>
-<%--            const action = '<%=action%>';--%>
-<%--            const msg = '<%=message%>';--%>
-<%--            // ERR_NoBoard -> NoBoard--%>
-<%--            const code_name = msg.substring(4);--%>
-<%--            // ERR_NoBoard -> ERR--%>
-<%--            const code_type = msg.substring(0, 3);--%>
-<%--            // 유효성 검사--%>
-<%--            if(msg == "" || action == ""){--%>
-<%--                alert("잘못된 접근입니다.");--%>
-<%--                location.href="./home.jsp";--%>
-<%--                return;--%>
-<%--            }--%>
-<%--            // 코드가 ERR일 시--%>
-<%--            if(code_type == "ERR"){--%>
-<%--                if(code_name == "NoBoard"){--%>
-<%--                    alert("존재하지 않는 게시물입니다.");--%>
-<%--                    location.href ='./list.jsp?page=<%=pag2%>&pageSize=<%=pageSize%>';--%>
-<%--                }else if(code_name == "Path"){--%>
-<%--                    alert("올바른 경로로 접근하세요.");--%>
-<%--                    location.href = "./home.jsp";--%>
-<%--                }else if(code_name == "HaveRep"){--%>
-<%--                    alert("답글이 있는 경우 삭제할 수 없습니다.");--%>
-<%--                    location.href = './board.jsp?page=<%=pag2%>&pageSize=<%=pageSize%>&bno=<%=bno%>&action=MOD';--%>
-<%--                // action 에러인 경우--%>
-<%--                }else{--%>
-<%--                    alert(action_type[code_name] + "도중 에러가 발생했습니다.");--%>
-<%--                    <% action = "DEL".equals(action) ? "MOD" : action; %>--%>
-<%--                    location.href='./board.jsp?page=<%=pag2%>&pageSize=<%=pageSize%>&bno=<%=bno%>&title=<%=title%>&content=<%=content%>&action=<%=action%>';--%>
-<%--                }--%>
-<%--            // 코드가 SUC일 시--%>
-<%--            }else{--%>
-<%--                alert("성공적으로 " + action_type[code_name] + "되었습니다.");--%>
-<%--                // WRT일 시--%>
-<%--                if(code_name == "WRT"){--%>
-<%--                    location.href = "./list.jsp";--%>
-<%--                // MOD일 시--%>
-<%--                }else if(code_name == "MOD"){--%>
-<%--                    location.href = './board.jsp?page=<%=pag2%>&pageSize=<%=pageSize%>&bno=<%=bno%>&action=MOD';--%>
-<%--                // DEL, REP일 시--%>
-<%--                }else{--%>
-<%--                    location.href = './list.jsp?page=<%=pag2%>&pageSize=<%=pageSize%>';--%>
-<%--                }--%>
-<%--            }--%>
-<%--        })--%>
-<%--    </script>--%>
 </body>
 </html>

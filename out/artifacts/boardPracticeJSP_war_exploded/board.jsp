@@ -35,8 +35,8 @@
         final String DRIVER = "com.mysql.cj.jdbc.Driver";
         final String URL = "jdbc:mysql://127.0.0.1:3306/book_ex?useSSL=false";
         final String USER = "root";
-//    final String PW = "rjsduq!1";
-        final String PW = "1234";
+        final String PW = "rjsduq!1";
+//        final String PW = "1234";
         // html
         String titleHTML = "";
 
@@ -63,8 +63,8 @@
         }else{
             action = "".equals(request.getParameter("action")) ? "WRT" : request.getParameter("action");
             titleHTML = "MOD".equals(action) ? "글 수정" : "글 작성";
-            pag2 = Integer.parseInt(request.getParameter("page"));
-            pageSize = Integer.parseInt(request.getParameter("pageSize"));
+            pag2 = intCheck(request.getParameter("page")) ? Integer.parseInt(request.getParameter("page")) : 1;
+            pageSize = intCheck(request.getParameter("pageSize")) ? Integer.parseInt(request.getParameter("pageSize")) : 10;
             if(!"WRT".equals(action)){
                 bno = intCheck(request.getParameter("bno")) == true ? Integer.parseInt(request.getParameter("bno")) : 0;
                 if(bno == 0) message="ERR_Path";
@@ -107,9 +107,9 @@
 
         <form id="form">
             <input type="hidden" id="bno" name="bno" value="<%=bno%>"/>
-            <input type="hidden" name="page" value="<%=pag2%>"/>
-            <input type="hidden" name="pageSize" value="<%=pageSize%>"/>
-            <input type="hidden" id="actionInput" name="action" value="<%=action%>"/>
+            <input type="hidden" id="page" name="page" value="<%=pag2%>"/>
+            <input type="hidden" id="pageSize" name="pageSize" value="<%=pageSize%>"/>
+            <input type="hidden" id="action" name="action" value="<%=action%>"/>
             <div class="contentsContainer">
                 <ul>
                     <li>
@@ -134,61 +134,106 @@
     </div>
     <script>
         $(document).ready(function(){
-            const bno = $("#bno").val();
-            const action = $("#actionInput").val();
-            let requestJSON = {};
-            let message = "";
+            let title;
+            let content;
+            let bno = $("#bno").val();
+            let action = $("#action").val();
+            let page = $("#page").val();
+            let pageSize = $("#pageSize").val();
+            let message_proc = function(message){
+                if(message == ""){
+                    alert("잘못된 접근입니다.");
+                    location.href="./home.jsp";
+                }
+                const action_type = {
+                    "WRT" : "등록",
+                    "MOD" : "수정",
+                    "DEL" : "삭제",
+                    "REP" : "답글 등록"
+                }
+                // ERR_NoBoard -> NoBoard
+                const code_name = message.substring(4);
+                // ERR_NoBoard -> ERR
+                const code_type = message.substring(0, 3);
+
+                if(code_type == "SUC"){
+                    alert("성공적으로 " + action_type[code_name] + "되었습니다.");
+                    if(code_name!="MOD"){
+                        location.href="./list.jsp?page=" + page + "&pageSize=" + pageSize;
+                    }
+                }else{
+                    if(code_name == "NoBoard"){
+                        alert("존재하지 않는 게시물입니다.");
+                        location.href="./list.jsp?page=" + page + "&pageSize=" + pageSize;
+                    }else if(code_name == "Path"){
+                        alert("올바른 경로로 접근하세요.");
+                        location.href="./home.jsp";
+                    }else if(code_name == "HaveRep"){
+                        alert("답글이 있는 경우 삭제할 수 없습니다.");
+                    }else{
+                        alert(action_type[code_name] + "도중 에러가 발생하였습니다.");
+                    }
+                }
+            }
+
             $("#write").on("click", function(){
-                let form = $("#form");
-                const title = $("#title").val().trim();
-                const content = $("#content").val().trim();
-                console.log(requestJSON);
+                title = $("#title").val().trim();
+                content = $("#content").val().trim();
                 if(title == "" || content == "") {
                     alert("제목 혹은 본문 내용은 필수입니다.");
                     return;
+                }
+                let json_data = {
+                    action : action,
+                    title : title,
+                    content : content
+                };
+                if(action == "REP" || action=="MOD"){
+                    bno = $("#bno").val();
+                    json_data.bno = bno;
                 }
                 $.ajax({
                     type : 'POST',
                     url : 'proc.jsp',
                     header : {"content-type" : "application/json"},
-                    data : {
-                        action : action,
-                        title : title,
-                        content : content
-                    },
+                    data : json_data,
                     dataType : "JSON",
                     success : function(result){
-                        message = result.message;
-                        alert(message);
+                        message_proc(result.message);
                     },
                     error: function( request, status, error ){
-                        console.log("status : " + request.status + ", message : " + request.responseText + ", error : " + error);
+                        alert("알 수 없는 오류가 발생하였습니다.");
                     }
                 });
             })
 
             $("#list").on("click", function(){
-                location.href='./list.jsp?page=<%=pag2%>&pageSize=<%=pageSize%>';
+                location.href='./list.jsp?page=' + page + '&pageSize=' + pageSize;
             })
 
             $("#delete").on("click", function(){
-                let form = $("#form");
                 if(confirm("정말로 삭제하시겠습니까?")){
-                    $("#actionInput").val("DEL");
-                    form.attr('action', './proc.jsp');
-                    form.attr('method', 'post');
-                    form.submit();
+                    $.ajax({
+                        type : 'POST',
+                        url : 'proc.jsp',
+                        header : {"content-type" : "application/json"},
+                        data : {
+                            action : 'DEL',
+                            bno : bno
+                        },
+                        dataType : "JSON",
+                        success : function(result){
+                            message_proc(result.message);
+                        },
+                        error: function(){
+                            alert("알 수 없는 오류가 발생하였습니다.");
+                        }
+                    });
                 }
             })
 
             $("#reply").on("click", function(){
-                let form = $("#form");
-                $("#title").val("");
-                $("#content").val("");
-                $("#actionInput").val("REP");
-                form.attr('action', './board.jsp');
-                form.attr('method', 'get');
-                form.submit();
+                location.href="./board.jsp?page="+page+"&pageSize="+pageSize+"&bno="+bno+"&action=REP";
             })
         })
     </script>
