@@ -35,7 +35,8 @@
         final String DRIVER = "com.mysql.cj.jdbc.Driver";
         final String URL = "jdbc:mysql://127.0.0.1:3306/book_ex?useSSL=false";
         final String USER = "root";
-        final String PW = "rjsduq!1";
+//    final String PW = "rjsduq!1";
+        final String PW = "1234";
         // html
         String titleHTML = "";
 
@@ -53,7 +54,6 @@
         String title = "";
         String content = "";
         String message = null;
-        JSONObject object = new JSONObject();
         PrintWriter prw = response.getWriter();
         response.setContentType("application/json;charset=utf-8");
 
@@ -160,9 +160,8 @@
                 e.printStackTrace();
             }
         }
-        System.out.println(message);
-        String st = "{\"message\":" +"\"" + message + "\""+ "}";
-        prw.println(st);
+        String json = "{\"message\":" +"\"" + message + "\""+ "}";
+        prw.println(json);
         prw.close();
 
 

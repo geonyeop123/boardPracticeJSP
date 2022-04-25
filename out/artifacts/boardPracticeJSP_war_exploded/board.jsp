@@ -35,7 +35,8 @@
         final String DRIVER = "com.mysql.cj.jdbc.Driver";
         final String URL = "jdbc:mysql://127.0.0.1:3306/book_ex?useSSL=false";
         final String USER = "root";
-        final String PW = "rjsduq!1";
+//    final String PW = "rjsduq!1";
+        final String PW = "1234";
         // html
         String titleHTML = "";
 
@@ -155,9 +156,9 @@
                         title : title,
                         content : content
                     },
-                    dataType : "text",
+                    dataType : "JSON",
                     success : function(result){
-                        message = JSON.parse(result).message;
+                        message = result.message;
                         alert(message);
                     },
                     error: function( request, status, error ){

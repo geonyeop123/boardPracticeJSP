@@ -35,7 +35,8 @@
         final String DRIVER = "com.mysql.cj.jdbc.Driver";
         final String URL = "jdbc:mysql://127.0.0.1:3306/book_ex?useSSL=false";
         final String USER = "root";
-        final String PW = "rjsduq!1";
+//    final String PW = "rjsduq!1";
+        final String PW = "1234";
         // html
         String titleHTML = "";
 
@@ -106,9 +107,9 @@
 
         <form id="form">
             <input type="hidden" id="bno" name="bno" value="<%=bno%>"/>
-            <input type="hidden" name="page" value="<%=pag2%>"/>
-            <input type="hidden" name="pageSize" value="<%=pageSize%>"/>
-            <input type="hidden" id="actionInput" name="action" value="<%=action%>"/>
+            <input type="hidden" id="page" name="page" value="<%=pag2%>"/>
+            <input type="hidden" id="pageSize" name="pageSize" value="<%=pageSize%>"/>
+            <input type="hidden" id="action" name="action" value="<%=action%>"/>
             <div class="contentsContainer">
                 <ul>
                     <li>
@@ -133,14 +134,20 @@
     </div>
     <script>
         $(document).ready(function(){
-            const bno = $("#bno").val();
-            const action = $("#actionInput").val();
-            let requestJSON = {};
-            let message = "";
+            let bno = $("#bno").val();
+            let action = $("#action").val();
+            let title = $("#title").val();
+            let content = $("#content").val();
+            let page = $("#page").val();
+            let pageSize = $("#pageSize").val();
+            let message;
+            let message_check = function(message){
+
+            }
+
             $("#write").on("click", function(){
-                let form = $("#form");
-                const title = $("#title").val().trim();
-                const content = $("#content").val().trim();
+                title = title.trim();
+                content = content.trim();
                 console.log(requestJSON);
                 if(title == "" || content == "") {
                     alert("제목 혹은 본문 내용은 필수입니다.");
@@ -155,9 +162,9 @@
                         title : title,
                         content : content
                     },
-                    dataType : "text",
+                    dataType : "JSON",
                     success : function(result){
-                        message = JSON.parse(result).message;
+                        message = result.message;
                         alert(message);
                     },
                     error: function( request, status, error ){
@@ -190,6 +197,7 @@
                 form.submit();
             })
         })
+
     </script>
 </body>
 </html>
