@@ -60,12 +60,12 @@
         // html
         String titleHTML = "";
 
-        if(request.getParameter("action") == null || !Arrays.asList(actions).contains(request.getParameter("action"))){
+        // action값이 안들어오면 WRT로 세팅
+        action = (request.getParameter("action") == null) ? "WRT" : request.getParameter("action");
+        System.out.println(action);
+        if(!Arrays.asList(actions).contains(action)){
             message = "ERR_Path";
         }else{
-            // action값이 안들어오면 WRT로 세팅
-            action = "".equals(request.getParameter("action")) ? "WRT" : request.getParameter("action");
-
             titleHTML = "MOD".equals(action) ? "글 수정" : "글 작성";
             // page, pageSize가 없거나 다른 값으로 들어온 경우 1, 10으로 세팅
             pag2 = intCheck(request.getParameter("page")) ? Integer.parseInt(request.getParameter("page")) : 1;
@@ -141,6 +141,17 @@
         </form>
     </div>
     <script>
+        this_message = "<%=message%>";
+        // 만일 해당 페이지에서 오류가 발생하면 처리
+        if(this_message != null){
+            if(this_message == "ERR_Path"){
+                alert("올바른 경로로 접근하세요.");
+                location.href="./home.jsp";
+            }else if(this_message == "ERR_NoBoard"){
+                alert("존재하지 않는 게시물입니다.");
+                location.href="./list.jsp?page=<%=pag2%>&pageSize=<%=pageSize%>";
+            }
+        }
         $(document).ready(function(){
             /////
             // 선언

@@ -10,6 +10,7 @@
 --%>
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%!
+    // 해당 값이 int인지 체크하는 함수
     public boolean intCheck(String s){
         if("".equals(s) || s == null){
             return false;
@@ -23,6 +24,9 @@
     }
 %>
 <%
+    /////
+    // 선언
+    /////
     // DB
     final String DRIVER = "com.mysql.cj.jdbc.Driver";
     final String URL = "jdbc:mysql://127.0.0.1:3306/book_ex?useSSL=false";
@@ -35,6 +39,7 @@
     String SQL = null;
 
     // Paging
+    // page, pageSize가 없거나 다른 값으로 들어온 경우 1, 10으로 세팅
     int pag2 = intCheck(request.getParameter("page")) == false ? 1 : Integer.parseInt(request.getParameter("page"));
     int pageSize = intCheck(request.getParameter("pageSize")) == false ? 10 : Integer.parseInt(request.getParameter("pageSize"));
     int totalCnt = 0;
@@ -50,8 +55,11 @@
     String active = "";
     String repTitle = "";
 
-
+    /////
+    // 로직
+    /////
     try{
+        // DB 접속
         Class.forName(DRIVER);
         con = DriverManager.getConnection(URL, USER, PW);
 
@@ -60,11 +68,14 @@
         System.out.println("connection error");
     }
     try{
+        // 총 게시물 개수 확인
         SQL = "SELECT COUNT(*) FROM TBL_BOARD WHERE blind_yn = 'N'";
         pstmt = con.prepareStatement(SQL);
         rs = pstmt.executeQuery();
+
         if(rs.next())totalCnt = rs.getInt(1);
-        System.out.println(totalCnt);
+
+        // 게시물이 있으면 페이징 처리
         if(totalCnt != 0){
             startPage = (pag2 - 1) / naviSize * naviSize + 1;
             finalEndPage = (int)Math.ceil(((double)totalCnt / naviSize));
@@ -73,11 +84,13 @@
             prev = startPage != 1 ? true : false;
             next = endPage < finalEndPage ? true : false;
         }
+        // pstmt 재사용을 위해 clear
         pstmt.clearParameters();
     }catch(Exception e){
         e.printStackTrace();
         System.out.println("total error");
     }
+    // 게시물이 있으면 게시물 가져오기
     if(totalCnt != 0){
         try{
             SQL = "SELECT bno, step, title, writer, regdate  \n " +
@@ -104,7 +117,6 @@
     <script src="https://code.jquery.com/jquery-1.11.3.js"></script>
 </head>
 <body>
-    <% request.getParameter("hi"); %>
     <div class="header">
         <div class="logo">LOGO</div>
         <div class="navi">
@@ -132,16 +144,17 @@
                 </thead>
                 <tbody>
                 <%
+                    // 게시물이 있으면 게시물 표시
                     if(totalCnt != 0){
                         int j = 0;
                         while(rs.next()){
-                            System.out.println("j = " + j);
                 %>
                 <tr>
                     <th scope="row"><%=(boardStartNumber - j)%></th>
                     <td class="table_title">
                         <a href="./board.jsp?page=<%=pag2%>&pageSize=<%=pageSize%>&bno=<%=rs.getInt(1)%>&action=MOD">
                         <%  if(rs.getInt(2) != 0) {
+                            // 답글인 경우 답글 표시
                             for(int i = 0; i < rs.getInt(2);i++) repTitle += "&nbsp;&nbsp;&nbsp;";
                         %>
                             <span class="reply_tag"><%=repTitle%>Re :</span>
@@ -157,6 +170,7 @@
                     <%
                         j++;
                         }
+                    // 게시물이 없으면 해당 tr 표시
                     }else{
                         %>
                 <tr><td colspan="7" class="center_txt">게시물이 없습니다.</td></tr>
@@ -165,7 +179,10 @@
             </table>
                     </div>
                 </div>
-            <% if(totalCnt != 0){%>
+            <%
+                // 게시물이 있는 경우 페이지 버튼 표시
+                if(totalCnt != 0){
+            %>
             <div class="page_wrap">
                 <div class="page_nation">
                     <% if(prev){ %>

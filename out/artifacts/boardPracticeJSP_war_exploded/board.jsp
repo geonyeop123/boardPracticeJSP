@@ -19,6 +19,7 @@
 </head>
 <body>
     <%!
+        // 해당 값이 int인지 확인하는 함수
         public boolean intCheck(String s){
             if("".equals(s) || s == null){
                 return false;
@@ -32,15 +33,15 @@
         }
     %>
     <%
+        /////
+        // 선
+        /////
+        // DB
         final String DRIVER = "com.mysql.cj.jdbc.Driver";
         final String URL = "jdbc:mysql://127.0.0.1:3306/book_ex?useSSL=false";
         final String USER = "root";
         final String PW = "rjsduq!1";
 //        final String PW = "1234";
-        // html
-        String titleHTML = "";
-
-        // DB
         Connection con = null;
         PreparedStatement pstmt = null;
         ResultSet rs = null;
@@ -56,19 +57,26 @@
         String content = "";
         String message = null;
 
+        // html
+        String titleHTML = "";
 
-
-        if(request.getParameter("action") == null || !Arrays.asList(actions).contains(request.getParameter("action"))){
+        // action값이 안들어오면 WRT로 세팅
+        action = (request.getParameter("action") == null) ? "WRT" : request.getParameter("action");
+        System.out.println(action);
+        if(!Arrays.asList(actions).contains(action)){
             message = "ERR_Path";
         }else{
-            action = "".equals(request.getParameter("action")) ? "WRT" : request.getParameter("action");
             titleHTML = "MOD".equals(action) ? "글 수정" : "글 작성";
+            // page, pageSize가 없거나 다른 값으로 들어온 경우 1, 10으로 세팅
             pag2 = intCheck(request.getParameter("page")) ? Integer.parseInt(request.getParameter("page")) : 1;
             pageSize = intCheck(request.getParameter("pageSize")) ? Integer.parseInt(request.getParameter("pageSize")) : 10;
+
+            // WRT가 아닌 경우 bno 값 세팅, bno를 받지 않았다면 튕구기
             if(!"WRT".equals(action)){
                 bno = intCheck(request.getParameter("bno")) == true ? Integer.parseInt(request.getParameter("bno")) : 0;
                 if(bno == 0) message="ERR_Path";
             }
+            // action이 MOD인 경우 해당 bno가 있는지 확인
             if("MOD".equals(action)){
                 try{
                     Class.forName(DRIVER);
@@ -133,13 +141,30 @@
         </form>
     </div>
     <script>
+        this_message = "<%=message%>";
+        // 만일 해당 페이지에서 오류가 발생하면 처리
+        if(this_message != null){
+            if(this_message == "ERR_Path"){
+                alert("올바른 경로로 접근하세요.");
+                location.href="./home.jsp";
+            }else if(this_message == "ERR_NoBoard"){
+                alert("존재하지 않는 게시물입니다.");
+                location.href="./list.jsp?page=<%=pag2%>&pageSize=<%=pageSize%>";
+            }
+        }
         $(document).ready(function(){
+            /////
+            // 선언
+            /////
+
             let title;
             let content;
             let bno = $("#bno").val();
             let action = $("#action").val();
             let page = $("#page").val();
             let pageSize = $("#pageSize").val();
+
+            // ajax로 가져온 message에 따라 분기 처리를 위한 함수
             let message_proc = function(message){
                 if(message == ""){
                     alert("잘못된 접근입니다.");
@@ -177,6 +202,7 @@
             }
 
             $("#write").on("click", function(){
+                // 유효성 검사
                 title = $("#title").val().trim();
                 content = $("#content").val().trim();
                 if(title == "" || content == "") {
@@ -188,6 +214,7 @@
                     title : title,
                     content : content
                 };
+                // 답글 혹은 수정인 경우 JSON에 bno도 담아주기
                 if(action == "REP" || action=="MOD"){
                     bno = $("#bno").val();
                     json_data.bno = bno;
@@ -201,7 +228,7 @@
                     success : function(result){
                         message_proc(result.message);
                     },
-                    error: function( request, status, error ){
+                    error: function(){
                         alert("알 수 없는 오류가 발생하였습니다.");
                     }
                 });
