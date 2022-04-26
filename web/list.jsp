@@ -54,6 +54,7 @@
     // HTML
     String active = "";
     String repTitle = "";
+    String title = "";
 
     /////
     // 로직
@@ -160,8 +161,10 @@
                             <span class="reply_tag"><%=repTitle%>Re :</span>
                         <%
                             repTitle = "";}
+                            title = (rs.getString(3).length() > 40) ? rs.getString(3).substring(0, 40) + "..." : rs.getString(3);
                         %>
-                            <%=rs.getString(3)%>
+
+                            <%=title%>
                         </a>
                     </td>
                     <td><%=rs.getString(4)%></td>

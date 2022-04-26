@@ -148,6 +148,7 @@
                 alert("올바른 경로로 접근하세요.");
                 location.href="./home.jsp";
             }else if(this_message == "ERR_NoBoard"){
+                console.log("hi");
                 alert("존재하지 않는 게시물입니다.");
                 location.href="./list.jsp?page=<%=pag2%>&pageSize=<%=pageSize%>";
             }
@@ -209,6 +210,7 @@
                     alert("제목 혹은 본문 내용은 필수입니다.");
                     return;
                 }
+                if(title.length>256) alert("제목이 너무 길어요");
                 let json_data = {
                     action : action,
                     title : title,
@@ -264,5 +266,14 @@
             })
         })
     </script>
+    <%
+        try{
+            if(rs !=null) rs.close();
+            if(pstmt !=null) pstmt.close();
+            if(con !=null) con.close();
+        }catch(Exception e){
+            e.printStackTrace();
+        }
+    %>
 </body>
 </html>

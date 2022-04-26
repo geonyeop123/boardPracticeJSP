@@ -57,9 +57,9 @@
         String title = "";
         String content = "";
         String message = "";
-        int parentRef = 0;
-        int parentStep = 0;
-        int parentDepth = 0;
+        int currentRef = 0;
+        int currentStep = 0;
+        int currentDepth = 0;
 
         // html
         String titleHTML = "";
@@ -79,6 +79,7 @@
             try {
                 Class.forName(DRIVER);
                 con = DriverManager.getConnection(URL, USER, PW);
+                con.setAutoCommit(false);
             } catch (Exception e) {
                 System.out.println("Connection error");
                 e.printStackTrace();
@@ -93,7 +94,13 @@
                     pstmt.setString(1, title);
                     pstmt.setString(2, content);
                     resultCnt = pstmt.executeUpdate();
-                    message = resultCnt == 1 ? "SUC_WRT" : "ERR_WRT";
+                    if(resultCnt > 0){
+                        message = "SUC_WRT";
+                        con.commit();
+                    }else{
+                        message = "ERR_WRT";
+                        con.rollback();
+                    }
                 // WRT가 아닌 경우 특정 게시물과 연관이 있으므로, 해당 게시물이 있는지 확인
                 } else {
                     // 가져온 bno가 값이 없거나 다른 값인 경우 튕구기
@@ -111,13 +118,13 @@
                         pstmt = con.prepareStatement(SQL);
                         rs = pstmt.executeQuery();
                         // 해당 게시물이 없는 경우 에러 담기
-                        if(rs.next()){
+                        if(!rs.next()){
                             message = "ERR_NoBoard";
                         // 있는 경우 게시물 정보 담기
                         }else {
-                            parentRef = rs.getInt(1);
-                            parentStep = rs.getInt(2);
-                            parentDepth = rs.getInt(3);
+                            currentRef = rs.getInt(1);
+                            currentStep = rs.getInt(2);
+                            currentDepth = rs.getInt(3);
                             pstmt.clearParameters();
                             // 수정인 경우 로직 실행
                             if ("MOD".equals(action)) {
@@ -128,15 +135,21 @@
                                 pstmt.setString(2, content);
                                 pstmt.setInt(3, bno);
                                 resultCnt = pstmt.executeUpdate();
-                                message = resultCnt == 0 ? "ERR_MOD" : "SUC_MOD";
+                                if(resultCnt > 0){
+                                    message = "SUC_MOD";
+                                    con.commit();
+                                }else{
+                                    message = "ERR_MOD";
+                                    con.rollback();
+                                }
                             // 삭제인 경우
                             } else if ("DEL".equals(action)) {
                                 // 답글이 있는지 확인
                                 SQL = "SELECT count(*)\n" +
                                         "FROM tbl_board\n" +
-                                        "WHERE ref = " + parentRef + "\n" +
-                                        "AND step > " + parentStep + "\n" +
-                                        "AND depth = " + (parentDepth + 1);
+                                        "WHERE ref = " + currentRef + "\n" +
+                                        "AND step > " + currentStep + "\n" +
+                                        "AND depth = " + (currentDepth + 1);
                                 pstmt = con.prepareStatement(SQL);
                                 rs = pstmt.executeQuery();
                                 if (rs.next()) {
@@ -150,15 +163,35 @@
                                                 "WHERE bno = " + bno;
                                         pstmt = con.prepareStatement(SQL);
                                         resultCnt = pstmt.executeUpdate();
-                                        message = resultCnt == 0 ? "ERR_DEL" : "SUC_DEL";
+                                        if(resultCnt <= 0){
+                                            message = "ERR_DEL";
+                                            con.rollback();
+                                        }else{
+                                            pstmt.clearParameters();
+                                            // 삭제 후 하위 depth를 가진 게시물들의 depth를 1씩 감소
+                                            SQL = "UPDATE TBL_BOARD SET depth = depth - 1 " +
+                                                  "WHERE ref = " + currentRef + " " +
+                                                  "AND depth > " + currentDepth + " " +
+                                                  "AND blind_yn = 'N'";
+                                            pstmt = con.prepareStatement(SQL);
+                                            resultCnt += pstmt.executeUpdate();
+                                        }
+                                        if(resultCnt > 0){
+                                            message = "SUC_DEL";
+                                            con.commit();
+                                        }else{
+                                            message = "ERR_DEL";
+                                            con.rollback();
+                                        }
                                     }
                                 }
                             // 답글인 경우
                             } else if ("REP".equals(action)) {
                                 // 최상위 답글로 달기 위해 들어갈 위치보다 아래에 있는 게시물의 Depth를 1씩 증가
                                 SQL = "UPDATE TBL_BOARD SET depth = depth + 1 \n" +
-                                        "WHERE ref = " + parentRef + "\n" +
-                                        "AND depth > " + parentDepth;
+                                        "WHERE ref = " + currentRef + "\n" +
+                                        "AND depth > " + currentDepth + "\n" +
+                                        "AND blind_yn = 'N'";
                                 pstmt = con.prepareStatement(SQL);
                                 resultCnt = pstmt.executeUpdate();
                                 pstmt.clearParameters();
@@ -166,20 +199,34 @@
                                 SQL = "INSERT INTO TBL_BOARD(ref, step, depth, title, content, writer)" +
                                         "VALUES( ?, ?, ?, ?, ?, ?)";
                                 pstmt = con.prepareStatement(SQL);
-                                pstmt.setInt(1, parentRef);
-                                pstmt.setInt(2, parentStep + 1);
-                                pstmt.setInt(3, parentDepth + 1);
+                                pstmt.setInt(1, currentRef);
+                                pstmt.setInt(2, currentStep + 1);
+                                pstmt.setInt(3, currentDepth + 1);
                                 pstmt.setString(4, title);
                                 pstmt.setString(5, content);
                                 pstmt.setString(6, "yeop");
                                 resultCnt = pstmt.executeUpdate();
-                                message = resultCnt < 0 ? "ERR_REP" : "SUC_REP";
+                                if(resultCnt > 0){
+                                    message = "SUC_REP";
+                                    con.commit();
+                                }else{
+                                    message = "ERR_REP";
+                                    con.rollback();
+                                }
                             }
                         }
                     }
                 }
             }catch(Exception e){
                 e.printStackTrace();
+            }finally{
+                try{
+                    if(rs !=null) rs.close();
+                    if(pstmt !=null) pstmt.close();
+                    if(con !=null) con.close();
+                }catch(Exception e){
+                    e.printStackTrace();
+                }
             }
         }
         // 결과 값을 json으로 반환
