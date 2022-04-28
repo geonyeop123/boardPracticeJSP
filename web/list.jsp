@@ -10,17 +10,16 @@
 --%>
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%!
-    // 해당 값이 int인지 체크하는 함수
-    public boolean intCheck(String s){
+    // 해당 값이 int인지 체크해서 기본 값 반환
+    public int intCheck(String s, int defaultInt){
         if("".equals(s) || s == null){
-            return false;
+            return defaultInt;
         }
         try{
-            Integer.parseInt(s);
+            return Integer.parseInt(s);
         }catch(NumberFormatException e){
-            return false;
+            return defaultInt;
         }
-        return true;
     }
 %>
 <%
@@ -40,8 +39,8 @@
 
     // Paging
     // page, pageSize가 없거나 다른 값으로 들어온 경우 1, 10으로 세팅
-    int pag2 = intCheck(request.getParameter("page")) == false ? 1 : Integer.parseInt(request.getParameter("page"));
-    int pageSize = intCheck(request.getParameter("pageSize")) == false ? 10 : Integer.parseInt(request.getParameter("pageSize"));
+    int pag2 = intCheck(request.getParameter("page"), 1);
+    int pageSize = intCheck(request.getParameter("pageSize"), 10);
     int totalCnt = 0;
     int naviSize = 10;
     int startPage = 0;

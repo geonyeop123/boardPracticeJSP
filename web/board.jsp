@@ -19,17 +19,14 @@
 </head>
 <body>
     <%!
-        // 해당 값이 int인지 확인하는 함수
-        public boolean intCheck(String s){
-            if("".equals(s) || s == null){
-                return false;
-            }
+        // parameter를 받아 int를 반환
+        public int intCheck(String s, int defaultInt){
+            if("".equals(s) || s == null) return defaultInt;
             try{
-                Integer.parseInt(s);
+                return Integer.parseInt(s);
             }catch(NumberFormatException e){
-                return false;
+                return defaultInt;
             }
-            return true;
         }
     %>
     <%
@@ -68,13 +65,13 @@
         }else{
             titleHTML = "MOD".equals(action) ? "글 수정" : "글 작성";
             // page, pageSize가 없거나 다른 값으로 들어온 경우 1, 10으로 세팅
-            pag2 = intCheck(request.getParameter("page")) ? Integer.parseInt(request.getParameter("page")) : 1;
-            pageSize = intCheck(request.getParameter("pageSize")) ? Integer.parseInt(request.getParameter("pageSize")) : 10;
+            pag2 = intCheck(request.getParameter("page"), 1);
+            pageSize = intCheck(request.getParameter("pageSize"), 10);
 
             // WRT가 아닌 경우 bno 값 세팅, bno를 받지 않았다면 튕구기
             if(!"WRT".equals(action)){
-                bno = intCheck(request.getParameter("bno")) == true ? Integer.parseInt(request.getParameter("bno")) : 0;
-                if(bno == 0) message="ERR_Path";
+                bno = intCheck(request.getParameter("bno"), -1);
+                if(bno < 0) message="ERR_Path";
             }
             // action이 MOD인 경우 해당 bno가 있는지 확인
             if("MOD".equals(action)){
