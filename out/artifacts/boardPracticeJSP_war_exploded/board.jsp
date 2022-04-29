@@ -2,7 +2,8 @@
 <%@ page import="java.sql.PreparedStatement" %>
 <%@ page import="java.sql.Connection" %>
 <%@ page import="java.sql.ResultSet" %>
-<%@ page import="java.sql.DriverManager" %><%--
+<%@ page import="java.sql.DriverManager" %>
+<%@ page import="java.io.PrintWriter" %><%--
   Created by IntelliJ IDEA.
   User: yeop
   Date: 2022/04/09
@@ -19,17 +20,14 @@
 </head>
 <body>
     <%!
-        // 해당 값이 int인지 확인하는 함수
-        public boolean intCheck(String s){
-            if("".equals(s) || s == null){
-                return false;
-            }
+        // parameter를 받아 int를 반환
+        public int intCheck(String s, int defaultInt){
+            if("".equals(s) || s == null) return defaultInt;
             try{
-                Integer.parseInt(s);
+                return Integer.parseInt(s);
             }catch(NumberFormatException e){
-                return false;
+                return defaultInt;
             }
-            return true;
         }
     %>
     <%
@@ -59,6 +57,7 @@
 
         // html
         String titleHTML = "";
+        PrintWriter prw = response.getWriter();
 
         // action값이 안들어오면 WRT로 세팅
         action = (request.getParameter("action") == null) ? "WRT" : request.getParameter("action");
@@ -68,13 +67,13 @@
         }else{
             titleHTML = "MOD".equals(action) ? "글 수정" : "글 작성";
             // page, pageSize가 없거나 다른 값으로 들어온 경우 1, 10으로 세팅
-            pag2 = intCheck(request.getParameter("page")) ? Integer.parseInt(request.getParameter("page")) : 1;
-            pageSize = intCheck(request.getParameter("pageSize")) ? Integer.parseInt(request.getParameter("pageSize")) : 10;
+            pag2 = intCheck(request.getParameter("page"), 1);
+            pageSize = intCheck(request.getParameter("pageSize"), 10);
 
             // WRT가 아닌 경우 bno 값 세팅, bno를 받지 않았다면 튕구기
             if(!"WRT".equals(action)){
-                bno = intCheck(request.getParameter("bno")) == true ? Integer.parseInt(request.getParameter("bno")) : 0;
-                if(bno == 0) message="ERR_Path";
+                bno = intCheck(request.getParameter("bno"), -1);
+                if(bno < 0) message="ERR_Path";
             }
             // action이 MOD인 경우 해당 bno가 있는지 확인
             if("MOD".equals(action)){
@@ -272,6 +271,10 @@
             if(pstmt !=null) pstmt.close();
             if(con !=null) con.close();
         }catch(Exception e){
+            prw.println("<script>");
+            prw.println("alert('에러가 발생했습니다')");
+            prw.println("location.href='error.jsp'");
+            prw.println("</script>");
             e.printStackTrace();
         }
     %>

@@ -20,16 +20,15 @@
 <body>
     <%!
         // 해당 값이 int형인지 체크하는 함수
-        public boolean intCheck(String s){
+        public int intCheck(String s, int defaultInt){
             if("".equals(s) || s == null){
-                return false;
+                return defaultInt;
             }
             try{
-                Integer.parseInt(s);
+                return Integer.parseInt(s);
             }catch(NumberFormatException e){
-                return false;
+                return defaultInt;
             }
-            return true;
         }
     %>
     <%
@@ -40,8 +39,8 @@
         final String DRIVER = "com.mysql.cj.jdbc.Driver";
         final String URL = "jdbc:mysql://127.0.0.1:3306/book_ex?useSSL=false";
         final String USER = "root";
-        final String PW = "rjsduq!1";
-        //final String PW = "1234";
+//        final String PW = "rjsduq!1";
+        final String PW = "1234";
 
         // DB
         Connection con = null;

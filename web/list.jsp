@@ -1,7 +1,8 @@
 <%@ page import="java.sql.Connection" %>
 <%@ page import="java.sql.DriverManager" %>
 <%@ page import="java.sql.PreparedStatement" %>
-<%@ page import="java.sql.ResultSet" %><%--
+<%@ page import="java.sql.ResultSet" %>
+<%@ page import="java.io.PrintWriter" %><%--
   Created by IntelliJ IDEA.
   User: yeop
   Date: 2022/04/09
@@ -30,8 +31,8 @@
     final String DRIVER = "com.mysql.cj.jdbc.Driver";
     final String URL = "jdbc:mysql://127.0.0.1:3306/book_ex?useSSL=false";
     final String USER = "root";
-    final String PW = "rjsduq!1";
-//    final String PW = "1234";
+//    final String PW = "rjsduq!1";
+    final String PW = "1234";
     Connection con = null;
     PreparedStatement pstmt = null;
     ResultSet rs = null;
@@ -51,9 +52,8 @@
     boolean next = false;
 
     // HTML
-    String active = "";
     String repTitle = "";
-    String title = "";
+    PrintWriter prw = response.getWriter();
 
     /////
     // 로직
@@ -62,12 +62,6 @@
         // DB 접속
         Class.forName(DRIVER);
         con = DriverManager.getConnection(URL, USER, PW);
-
-    }catch(Exception e){
-        e.printStackTrace();
-        System.out.println("connection error");
-    }
-    try{
         // 총 게시물 개수 확인
         SQL = "SELECT COUNT(*) FROM TBL_BOARD WHERE blind_yn = 'N'";
         pstmt = con.prepareStatement(SQL);
@@ -75,39 +69,26 @@
 
         if(rs.next())totalCnt = rs.getInt(1);
 
-        // 게시물이 있으면 페이징 처리
-        if(totalCnt != 0){
+        // 게시물이 있으면
+        if(totalCnt > 0) {
+            // 페이징 처리
             startPage = (pag2 - 1) / naviSize * naviSize + 1;
-            finalEndPage = (int)Math.ceil(((double)totalCnt / naviSize));
+            finalEndPage = (int) Math.ceil(((double) totalCnt / naviSize));
             endPage = startPage + naviSize - 1 > finalEndPage ? finalEndPage : startPage + pageSize - 1;
             boardStartNumber = totalCnt - (pag2 - 1) * pageSize;
             prev = startPage != 1 ? true : false;
             next = endPage < finalEndPage ? true : false;
-        }
-        // pstmt 재사용을 위해 clear
-        pstmt.clearParameters();
-    }catch(Exception e){
-        e.printStackTrace();
-        System.out.println("total error");
-    }
-    // 게시물이 있으면 게시물 가져오기
-    if(totalCnt != 0){
-        try{
+
+            // 게시물 가져오기
             SQL = "SELECT bno, step, title, writer, regdate  \n " +
                     "FROM tbl_board\n" +
                     "WHERE 1=1\n" +
                     "AND blind_yn = 'N'\n" +
                     "ORDER BY ref DESC, depth ASC\n" +
-                    "LIMIT " + ((pag2 - 1) * pageSize) + ", " + pageSize ;
+                    "LIMIT " + ((pag2 - 1) * pageSize) + ", " + pageSize;
             pstmt = con.prepareStatement(SQL);
             rs = pstmt.executeQuery();
-        }catch(Exception e){
-            System.out.println("list get error");
-            e.printStackTrace();
         }
-    }
-
-
 %>
 <html>
 <head>
@@ -143,11 +124,11 @@
                 </tr>
                 </thead>
                 <tbody>
-                <%
-                    // 게시물이 있으면 게시물 표시
-                    if(totalCnt != 0){
+                <%// 게시물이 있으면 게시물 표시
+                    if(totalCnt > 0){
                         int j = 0;
                         while(rs.next()){
+                            repTitle = "";
                 %>
                 <tr>
                     <th scope="row"><%=(boardStartNumber - j)%></th>
@@ -159,11 +140,10 @@
                         %>
                             <span class="reply_tag"><%=repTitle%>Re :</span>
                         <%
-                            repTitle = "";}
-                            title = (rs.getString(3).length() > 40) ? rs.getString(3).substring(0, 40) + "..." : rs.getString(3);
+                            }
                         %>
-
-                            <%=title%>
+<%--                            title(rs.getString(3))의 길이가 40보다 길 경우 40까지 자르고 ...으로 줄이기--%>
+                            <%=(rs.getString(3).length() > 40) ? rs.getString(3).substring(0, 40) + "..." : rs.getString(3)%>
                         </a>
                     </td>
                     <td><%=rs.getString(4)%></td>
@@ -172,51 +152,65 @@
                     <%
                         j++;
                         }
-                    // 게시물이 없으면 해당 tr 표시
-                    }else{
                         %>
-                <tr><td colspan="7" class="center_txt">게시물이 없습니다.</td></tr>
+                </tbody>
+            </table>
+                <div class="page_wrap">
+                    <div class="page_nation">
+                        <% if(prev){ %>
+                        <a class="arrow prev" href="./list.jsp?page=<%=startPage - 1%>&pageSize=<%=pageSize%>">&lt;</a>
+                        <% }%>
+                        <% for(int i = startPage; i <= endPage; i++){%>
+                        <a class="<%=(i == pag2) ? "active" : "" %>" href="./list.jsp?page=<%=i%>&pageSize=<%=pageSize%>"><%=i%></a>
+                        <%
+                            }
+                        %>
+                        <% if(next){ %>
+                        <a class="arrow next" href="./list.jsp?page=<%=endPage - 1%>&pageSize=<%=pageSize%>">&gt;</a>
+                        <% }%>
+                    </div>
+                </div>
+<%--            게시물이 없으면 표시--%>
+                <% }else{ %>
+                <table class="board_table">
+                    <thead>
+                    <tr>
+                        <th scope="cols">번호</th>
+                        <th scope="cols">제목</th>
+                        <th scope="cols">작성자</th>
+                        <th scope="cols">작성일</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr><td colspan="7" class="center_txt">게시물이 없습니다.</td></tr>
+                    </tbody>
+                </table>
                 <% }%>
                 </tbody>
             </table>
                     </div>
                 </div>
-            <%
-                // 게시물이 있는 경우 페이지 버튼 표시
-                if(totalCnt != 0){
-            %>
-            <div class="page_wrap">
-                <div class="page_nation">
-                    <% if(prev){ %>
-                    <a class="arrow prev" href="./list.jsp?page=<%=startPage - 1%>&pageSize=<%=pageSize%>">&lt;</a>
-                    <% }%>
-                    <% for(int i = startPage; i <= endPage; i++){
-                        if(i == pag2) active = "active";%>
-                    <a class="<%=active%>" href="./list.jsp?page=<%=i%>&pageSize=<%=pageSize%>"><%=i%></a>
-                    <%
-                        active = "";
-                        }
-                    %>
-                    <% if(next){ %>
-                    <a class="arrow next" href="./list.jsp?page=<%=endPage - 1%>&pageSize=<%=pageSize%>">&gt;</a>
-                    <% }%>
-                </div>
-            </div>
-            <%}%>
         </div>
     </div>
     <%
-        try{
-            if(rs !=null) rs.close();
-            if(pstmt !=null) pstmt.close();
-            if(con !=null) con.close();
         }catch(Exception e){
+            prw.println("<script>");
+            prw.println("alert('에러가 발생했습니다')");
+            prw.println("location.href='error.jsp'");
+            prw.println("</script>");
             e.printStackTrace();
+        }finally {
+            try {
+                if (rs != null) rs.close();
+                if (pstmt != null) pstmt.close();
+                if (con != null) con.close();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
     %>
     <script>
         $(document).ready(function(){
-
             $("#write_btn").on("click",function(){
                 location.href='./board.jsp?page=<%=pag2%>&pageSize=<%=pageSize%>&action=WRT';
             })
