@@ -53,8 +53,8 @@
         String[] actions = {"WRT", "MOD", "DEL", "REP"};
         String action = "";
         int bno = 0;
-        String title = "";
-        String content = "";
+        String title = null;
+        String content = null;
         String message = "";
         int currentRef = 0;
         int currentStep = 0;
@@ -68,155 +68,148 @@
         PrintWriter prw = response.getWriter();
         response.setContentType("application/json;charset=utf-8");
 
-        // 지정된 action이외의 값 혹은 action이 없는 경우 튕구기
-        action = Arrays.asList(actions).contains(request.getParameter("action")) ? request.getParameter("action") : "";
-        if("".equals(action)){
-            message = "ERR_Path";
-
-        // 지정된 action인 경우 로직 실행
-        }else {
-            try {
-                Class.forName(DRIVER);
-                con = DriverManager.getConnection(URL, USER, PW);
-                con.setAutoCommit(false);
-            } catch (Exception e) {
-                System.out.println("Connection error");
-                e.printStackTrace();
+        /////
+        /// 유효성 검사
+        /////
+        try {
+            Class.forName(DRIVER);
+            con = DriverManager.getConnection(URL, USER, PW);
+            con.setAutoCommit(false);
+            // action 값 검사
+            if (!Arrays.asList(actions).contains(request.getParameter("action"))) {
+                message = "ERR_Path";
+            } else {
+                action = request.getParameter("action");
+                System.out.println(action);
             }
-            title = request.getParameter("title");
-            content = request.getParameter("content");
-            try {
-                if ("WRT".equals(action)) {
-                    SQL = "INSERT INTO TBL_BOARD(ref, step, depth, title, content, writer)\n" +
-                            "VALUES((SELECT IFNULL(MAX(bno), 0)+1 FROM TBL_BOARD B) , 0, 0, ?, ?, 'yeop')";
+            // bno 값 검사
+            if (!"WRT".equals(action)) {
+                bno = intCheck(request.getParameter("bno"), -1);
+                if (bno < 0) {
+                    message = "ERR_Path";
+                } else {
+                    SQL = "SELECT ref, step, depth " +
+                            "FROM TBL_BOARD " +
+                            "WHERE blind_yn = 'N' " +
+                            "AND bno = " + bno;
+                    pstmt = con.prepareStatement(SQL);
+                    rs = pstmt.executeQuery();
+                    pstmt.clearParameters();
+                    // 해당 게시물이 없는 경우 에러 담기
+                    if (!rs.next()) {
+                        message = "ERR_NoBoard";
+                    // 있는 경우 게시물 정보 담기
+                    } else {
+                        currentRef = rs.getInt(1);
+                        currentStep = rs.getInt(2);
+                        currentDepth = rs.getInt(3);
+                    }
+                }
+            // WRT일 경우 쓰일 ref 가져오기
+            } else {
+                SQL = "SELECT IFNULL(MAX(ref), 0)+1 FROM TBL_BOARD B";
+                pstmt = con.prepareStatement(SQL);
+                rs = pstmt.executeQuery();
+                if (rs.next()) currentRef = rs.getInt(1);
+                pstmt.clearParameters();
+            }
+
+            // title, content 값 검사
+            if (!"DEL".equals(action)) {
+                title = request.getParameter("title");
+                content = request.getParameter("content");
+                if (title == null || content == null) message = "ERR_Path";
+            }
+
+            /////
+            /// 로직
+            /////
+
+            if ("".equals(message)) {
+                // 수정인 경우
+                if ("MOD".equals(action)) {
+                    SQL = "UPDATE TBL_BOARD SET title = ?, content = ? \n" +
+                            "WHERE bno = ?";
                     pstmt = con.prepareStatement(SQL);
                     pstmt.setString(1, title);
                     pstmt.setString(2, content);
+                    pstmt.setInt(3, bno);
                     resultCnt = pstmt.executeUpdate();
                     if(resultCnt > 0){
-                        message = "SUC_WRT";
+                        message = "SUC_MOD";
                         con.commit();
                     }else{
-                        message = "ERR_WRT";
+                        message = "ERR_MOD";
                         con.rollback();
                     }
-                // WRT가 아닌 경우 특정 게시물과 연관이 있으므로, 해당 게시물이 있는지 확인
-                } else {
-                    // 가져온 bno가 값이 없거나 다른 값인 경우 튕구기
-                    if (intCheck(request.getParameter("bno"))) {
-                        bno = Integer.parseInt(request.getParameter("bno"));
+                // 삭제인 경우
+                } else if ("DEL".equals(action)) {
+                    SQL = "SELECT count(*) "  +
+                            "FROM tbl_board " +
+                            "WHERE ref = ? "  +
+                            "AND step > ? "   +
+                            "AND depth = ? ";
+                    pstmt = con.prepareStatement(SQL);
+                    pstmt.setInt(1, currentRef);
+                    pstmt.setInt(2, currentStep);
+                    pstmt.setInt(3, currentDepth + 1);
+                    rs = pstmt.executeQuery();
+                    pstmt.clearParameters();
+                    if (rs.next() && (rs.getInt(1) > 0)) {
+                        message = "ERR_HaveRep";
+                        con.rollback();
                     } else {
-                        message = "ERR_Path";
-                    }
-                    // bno가 정확한 값으로 들어온 경우 해당 bno의 게시물 가져오기
-                    if("".equals(message)) {
-                        SQL = "SELECT ref, step, depth " +
-                                "FROM TBL_BOARD " +
-                                "WHERE blind_yn = 'N' " +
-                                "AND bno = " + bno;
+                        SQL = "UPDATE TBL_BOARD SET blind_yn = 'Y' \n" +
+                                "WHERE bno = ?";
                         pstmt = con.prepareStatement(SQL);
-                        rs = pstmt.executeQuery();
-                        // 해당 게시물이 없는 경우 에러 담기
-                        if(!rs.next()){
-                            message = "ERR_NoBoard";
-                        // 있는 경우 게시물 정보 담기
-                        }else {
-                            currentRef = rs.getInt(1);
-                            currentStep = rs.getInt(2);
-                            currentDepth = rs.getInt(3);
-                            pstmt.clearParameters();
-                            // 수정인 경우 로직 실행
-                            if ("MOD".equals(action)) {
-                                SQL = "UPDATE TBL_BOARD SET title = ?, content = ? \n" +
-                                        "WHERE bno = ?";
-                                pstmt = con.prepareStatement(SQL);
-                                pstmt.setString(1, title);
-                                pstmt.setString(2, content);
-                                pstmt.setInt(3, bno);
-                                resultCnt = pstmt.executeUpdate();
-                                if(resultCnt > 0){
-                                    message = "SUC_MOD";
-                                    con.commit();
-                                }else{
-                                    message = "ERR_MOD";
-                                    con.rollback();
-                                }
-                            // 삭제인 경우
-                            } else if ("DEL".equals(action)) {
-                                // 답글이 있는지 확인
-                                SQL = "SELECT count(*)\n" +
-                                        "FROM tbl_board\n" +
-                                        "WHERE ref = " + currentRef + "\n" +
-                                        "AND step > " + currentStep + "\n" +
-                                        "AND depth = " + (currentDepth + 1);
-                                pstmt = con.prepareStatement(SQL);
-                                rs = pstmt.executeQuery();
-                                if (rs.next()) {
-                                    // 답글이 있는 경우 에러 담기
-                                    if (rs.getInt(1) != 0) {
-                                        message = "ERR_HaveRep";
-                                    // 없는 경우 삭제 진행
-                                    }else {
-                                        pstmt.clearParameters();
-                                        SQL = "UPDATE TBL_BOARD SET blind_yn = 'Y' \n" +
-                                                "WHERE bno = " + bno;
-                                        pstmt = con.prepareStatement(SQL);
-                                        resultCnt = pstmt.executeUpdate();
-                                        if(resultCnt <= 0){
-                                            message = "ERR_DEL";
-                                            con.rollback();
-                                        }else{
-                                            pstmt.clearParameters();
-                                            // 삭제 후 하위 depth를 가진 게시물들의 depth를 1씩 감소
-                                            SQL = "UPDATE TBL_BOARD SET depth = depth - 1 " +
-                                                  "WHERE ref = " + currentRef + " " +
-                                                  "AND depth > " + currentDepth + " " +
-                                                  "AND blind_yn = 'N'";
-                                            pstmt = con.prepareStatement(SQL);
-                                            resultCnt += pstmt.executeUpdate();
-                                        }
-                                        if(resultCnt > 0){
-                                            message = "SUC_DEL";
-                                            con.commit();
-                                        }else{
-                                            message = "ERR_DEL";
-                                            con.rollback();
-                                        }
-                                    }
-                                }
-                            // 답글인 경우
-                            } else if ("REP".equals(action)) {
-                                // 최상위 답글로 달기 위해 들어갈 위치보다 아래에 있는 게시물의 Depth를 1씩 증가
-                                SQL = "UPDATE TBL_BOARD SET depth = depth + 1 \n" +
-                                        "WHERE ref = " + currentRef + "\n" +
-                                        "AND depth > " + currentDepth + "\n" +
-                                        "AND blind_yn = 'N'";
-                                pstmt = con.prepareStatement(SQL);
-                                resultCnt = pstmt.executeUpdate();
-                                pstmt.clearParameters();
-                                // 이후 게시물 등록 진행
-                                SQL = "INSERT INTO TBL_BOARD(ref, step, depth, title, content, writer)" +
-                                        "VALUES( ?, ?, ?, ?, ?, ?)";
-                                pstmt = con.prepareStatement(SQL);
-                                pstmt.setInt(1, currentRef);
-                                pstmt.setInt(2, currentStep + 1);
-                                pstmt.setInt(3, currentDepth + 1);
-                                pstmt.setString(4, title);
-                                pstmt.setString(5, content);
-                                pstmt.setString(6, "yeop");
-                                resultCnt = pstmt.executeUpdate();
-                                if(resultCnt > 0){
-                                    message = "SUC_REP";
-                                    con.commit();
-                                }else{
-                                    message = "ERR_REP";
-                                    con.rollback();
-                                }
-                            }
+                        pstmt.setInt(1, bno);
+                        resultCnt = pstmt.executeUpdate();
+                        if (resultCnt < 0) {
+                            message = "ERR_DEL";
+                            con.rollback();
+                        } else {
+                            SQL = "UPDATE TBL_BOARD SET depth = depth - 1 " +
+                                    "WHERE ref = ? " +
+                                    "AND depth > ? " +
+                                    "AND blind_yn = 'N'";
+                            pstmt = con.prepareStatement(SQL);
+                            pstmt.setInt(1, currentRef);
+                            pstmt.setInt(2, currentDepth);
+                            pstmt.executeUpdate();
+                            message = "SUC_DEL";
+                            con.commit();
                         }
                     }
+                // WRT, REP 인 경우
+                } else {
+                    SQL = "INSERT INTO TBL_BOARD(ref, step, depth, title, content, writer) " +
+                            "VALUES( ?, ?, ?, ?, ?, ?)";
+                    pstmt = con.prepareStatement(SQL);
+                    pstmt.setInt(1, currentRef);
+                    currentStep = "WRT".equals(action) ? 0 : currentStep + 1;
+                    currentDepth = "WRT".equals(action) ? 0 : currentDepth + 1;
+                    pstmt.setInt(2, currentStep);
+                    pstmt.setInt(3, currentDepth);
+                    pstmt.setString(4, title);
+                    pstmt.setString(5, content);
+                    pstmt.setString(6, "yeop");
+                    resultCnt = pstmt.executeUpdate();
+                    System.out.println("currentRef = " + currentRef);
+                    System.out.println("currentStep = " + currentStep);
+                    System.out.println("currentDepth = " + currentDepth);
+                    System.out.println("title = " + title);
+                    System.out.println("content = " + content);
+                    System.out.println("resultCnt = " + resultCnt);
+                    if(resultCnt > 0){
+                        message = "SUC_" + action;
+                        con.commit();
+                    }else{
+                        message = "ERR_" + action;
+                        con.rollback();
+                    }
                 }
-            }catch(Exception e){
+            }
+        }catch(Exception e){
                 e.printStackTrace();
             }finally{
                 try{
@@ -227,7 +220,11 @@
                     e.printStackTrace();
                 }
             }
-        }
+
+        /////
+        /// 반환
+        /////
+
         // 결과 값을 json으로 반환
         json = "{\"message\":" +"\"" + message + "\""+ "}";
         prw.println(json);

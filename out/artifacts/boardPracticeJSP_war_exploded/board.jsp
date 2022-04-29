@@ -38,8 +38,8 @@
         final String DRIVER = "com.mysql.cj.jdbc.Driver";
         final String URL = "jdbc:mysql://127.0.0.1:3306/book_ex?useSSL=false";
         final String USER = "root";
-        final String PW = "rjsduq!1";
-//        final String PW = "1234";
+//        final String PW = "rjsduq!1";
+        final String PW = "1234";
         Connection con = null;
         PreparedStatement pstmt = null;
         ResultSet rs = null;
@@ -93,6 +93,10 @@
                         message = "ERR_NoBoard";
                     }
                 }catch(Exception e){
+                    prw.println("<script>");
+                    prw.println("alert('에러가 발생했습니다')");
+                    prw.println("location.href='error.jsp'");
+                    prw.println("</script>");
                     e.printStackTrace();
                 }
             }
