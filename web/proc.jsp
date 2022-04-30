@@ -4,7 +4,7 @@
 <%@ page import="java.util.Arrays" %>
 <%@ page import="java.sql.DriverManager" %>
 <%@ page import="org.json.simple.JSONObject" %>
-<%@ page import="java.io.PrintWriter" %><%--
+<%--
   Created by IntelliJ IDEA.
   User: yeop
   Date: 2022/04/09
@@ -12,12 +12,6 @@
   To change this template use File | Settings | File Templates.
 --%>
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
-<html>
-<head>
-    <title>BOARD</title>
-    <script src="https://code.jquery.com/jquery-1.11.3.js"></script>
-</head>
-<body>
     <%!
         // 해당 값이 int형인지 체크하는 함수
         public int intCheck(String s, int defaultInt){
@@ -39,8 +33,8 @@
         final String DRIVER = "com.mysql.cj.jdbc.Driver";
         final String URL = "jdbc:mysql://127.0.0.1:3306/book_ex?useSSL=false";
         final String USER = "root";
-//        final String PW = "rjsduq!1";
-        final String PW = "1234";
+        final String PW = "rjsduq!1";
+//        final String PW = "1234";
 
         // DB
         Connection con = null;
@@ -64,9 +58,21 @@
         String titleHTML = "";
 
         // ajax 반환을 위한 변수
-        String json = "";
-        PrintWriter prw = response.getWriter();
+
+        JSONObject json = new JSONObject();
         response.setContentType("application/json;charset=utf-8");
+
+        class BoardException extends RuntimeException{
+            String url;
+            String
+            BoardException(String cause){
+                if(Arrays.asList(actions).contains(cause)){
+
+                }
+
+            }
+            BoardException(){}
+        }
 
         /////
         /// 유효성 검사
@@ -77,16 +83,16 @@
             con.setAutoCommit(false);
             // action 값 검사
             if (!Arrays.asList(actions).contains(request.getParameter("action"))) {
-                message = "ERR_Path";
+                throw new BoardException("ERR_Path");
             } else {
                 action = request.getParameter("action");
-                System.out.println(action);
+
             }
             // bno 값 검사
             if (!"WRT".equals(action)) {
                 bno = intCheck(request.getParameter("bno"), -1);
                 if (bno < 0) {
-                    message = "ERR_Path";
+                    throw new BoardException("ERR_Path");
                 } else {
                     SQL = "SELECT ref, step, depth " +
                             "FROM TBL_BOARD " +
@@ -97,7 +103,7 @@
                     pstmt.clearParameters();
                     // 해당 게시물이 없는 경우 에러 담기
                     if (!rs.next()) {
-                        message = "ERR_NoBoard";
+                        throw new BoardException("ERR_NoBoard");
                     // 있는 경우 게시물 정보 담기
                     } else {
                         currentRef = rs.getInt(1);
@@ -118,7 +124,7 @@
             if (!"DEL".equals(action)) {
                 title = request.getParameter("title");
                 content = request.getParameter("content");
-                if (title == null || content == null) message = "ERR_Path";
+                if (title == null || content == null) throw new BoardException("ERR_Path");
             }
 
             /////
@@ -139,8 +145,8 @@
                         message = "SUC_MOD";
                         con.commit();
                     }else{
-                        message = "ERR_MOD";
                         con.rollback();
+                        throw new BoardException(action + "도중 에러가 발생했습니다.");
                     }
                 // 삭제인 경우
                 } else if ("DEL".equals(action)) {
@@ -156,8 +162,8 @@
                     rs = pstmt.executeQuery();
                     pstmt.clearParameters();
                     if (rs.next() && (rs.getInt(1) > 0)) {
-                        message = "ERR_HaveRep";
                         con.rollback();
+                        throw new BoardException("ERR_HaveRep");
                     } else {
                         SQL = "UPDATE TBL_BOARD SET blind_yn = 'Y' \n" +
                                 "WHERE bno = ?";
@@ -165,8 +171,8 @@
                         pstmt.setInt(1, bno);
                         resultCnt = pstmt.executeUpdate();
                         if (resultCnt < 0) {
-                            message = "ERR_DEL";
                             con.rollback();
+                            throw new BoardException(action + "도중 에러가 발생했습니다.");
                         } else {
                             SQL = "UPDATE TBL_BOARD SET depth = depth - 1 " +
                                     "WHERE ref = ? " +
@@ -186,31 +192,29 @@
                             "VALUES( ?, ?, ?, ?, ?, ?)";
                     pstmt = con.prepareStatement(SQL);
                     pstmt.setInt(1, currentRef);
-                    currentStep = "WRT".equals(action) ? 0 : currentStep + 1;
-                    currentDepth = "WRT".equals(action) ? 0 : currentDepth + 1;
-                    pstmt.setInt(2, currentStep);
-                    pstmt.setInt(3, currentDepth);
+                    pstmt.setInt(2, "WRT".equals(action) ? 0 : currentStep + 1);
+                    pstmt.setInt(3, "WRT".equals(action) ? 0 : currentDepth + 1);
                     pstmt.setString(4, title);
                     pstmt.setString(5, content);
                     pstmt.setString(6, "yeop");
                     resultCnt = pstmt.executeUpdate();
-                    System.out.println("currentRef = " + currentRef);
-                    System.out.println("currentStep = " + currentStep);
-                    System.out.println("currentDepth = " + currentDepth);
-                    System.out.println("title = " + title);
-                    System.out.println("content = " + content);
-                    System.out.println("resultCnt = " + resultCnt);
                     if(resultCnt > 0){
                         message = "SUC_" + action;
                         con.commit();
                     }else{
-                        message = "ERR_" + action;
                         con.rollback();
+                        throw new BoardException(action + "도중 에러가 발생했습니다.");
                     }
                 }
             }
-        }catch(Exception e){
-                e.printStackTrace();
+        }catch(BoardException be){
+            message = be.getMessage();
+            if(Arrays.asList(actions).contains(message)){
+                json.put("message", "")
+            }
+
+        } catch(Exception e){
+            e.printStackTrace();
             }finally{
                 try{
                     if(rs !=null) rs.close();
@@ -226,9 +230,7 @@
         /////
 
         // 결과 값을 json으로 반환
-        json = "{\"message\":" +"\"" + message + "\""+ "}";
-        prw.println(json);
-        prw.close();
+        json.put("message", message);
+        json.put("url", "board.jsp");
+        out.println(json);
     %>
-</body>
-</html>

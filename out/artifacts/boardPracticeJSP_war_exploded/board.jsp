@@ -2,8 +2,7 @@
 <%@ page import="java.sql.PreparedStatement" %>
 <%@ page import="java.sql.Connection" %>
 <%@ page import="java.sql.ResultSet" %>
-<%@ page import="java.sql.DriverManager" %>
-<%@ page import="java.io.PrintWriter" %><%--
+<%@ page import="java.sql.DriverManager" %><%--
   Created by IntelliJ IDEA.
   User: yeop
   Date: 2022/04/09
@@ -38,8 +37,8 @@
         final String DRIVER = "com.mysql.cj.jdbc.Driver";
         final String URL = "jdbc:mysql://127.0.0.1:3306/book_ex?useSSL=false";
         final String USER = "root";
-//        final String PW = "rjsduq!1";
-        final String PW = "1234";
+        final String PW = "rjsduq!1";
+//        final String PW = "1234";
         Connection con = null;
         PreparedStatement pstmt = null;
         ResultSet rs = null;
@@ -57,7 +56,6 @@
 
         // html
         String titleHTML = "";
-        PrintWriter prw = response.getWriter();
 
         // action값이 안들어오면 WRT로 세팅
         action = (request.getParameter("action") == null) ? "WRT" : request.getParameter("action");
@@ -93,10 +91,6 @@
                         message = "ERR_NoBoard";
                     }
                 }catch(Exception e){
-                    prw.println("<script>");
-                    prw.println("alert('에러가 발생했습니다')");
-                    prw.println("location.href='error.jsp'");
-                    prw.println("</script>");
                     e.printStackTrace();
                 }
             }
@@ -275,10 +269,6 @@
             if(pstmt !=null) pstmt.close();
             if(con !=null) con.close();
         }catch(Exception e){
-            prw.println("<script>");
-            prw.println("alert('에러가 발생했습니다')");
-            prw.println("location.href='error.jsp'");
-            prw.println("</script>");
             e.printStackTrace();
         }
     %>

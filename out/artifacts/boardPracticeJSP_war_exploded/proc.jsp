@@ -4,7 +4,7 @@
 <%@ page import="java.util.Arrays" %>
 <%@ page import="java.sql.DriverManager" %>
 <%@ page import="org.json.simple.JSONObject" %>
-<%@ page import="java.io.PrintWriter" %><%--
+<%--
   Created by IntelliJ IDEA.
   User: yeop
   Date: 2022/04/09
@@ -12,12 +12,6 @@
   To change this template use File | Settings | File Templates.
 --%>
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
-<html>
-<head>
-    <title>BOARD</title>
-    <script src="https://code.jquery.com/jquery-1.11.3.js"></script>
-</head>
-<body>
     <%!
         // 해당 값이 int형인지 체크하는 함수
         public int intCheck(String s, int defaultInt){
@@ -39,8 +33,8 @@
         final String DRIVER = "com.mysql.cj.jdbc.Driver";
         final String URL = "jdbc:mysql://127.0.0.1:3306/book_ex?useSSL=false";
         final String USER = "root";
-//        final String PW = "rjsduq!1";
-        final String PW = "1234";
+        final String PW = "rjsduq!1";
+//        final String PW = "1234";
 
         // DB
         Connection con = null;
@@ -64,8 +58,8 @@
         String titleHTML = "";
 
         // ajax 반환을 위한 변수
-        String json = "";
-        PrintWriter prw = response.getWriter();
+
+        JSONObject json = new JSONObject();
         response.setContentType("application/json;charset=utf-8");
 
         /////
@@ -77,7 +71,7 @@
             con.setAutoCommit(false);
             // action 값 검사
             if (!Arrays.asList(actions).contains(request.getParameter("action"))) {
-                message = "ERR_Path";
+                throw new Exception("ERR_Path");
             } else {
                 action = request.getParameter("action");
                 System.out.println(action);
@@ -186,20 +180,12 @@
                             "VALUES( ?, ?, ?, ?, ?, ?)";
                     pstmt = con.prepareStatement(SQL);
                     pstmt.setInt(1, currentRef);
-                    currentStep = "WRT".equals(action) ? 0 : currentStep + 1;
-                    currentDepth = "WRT".equals(action) ? 0 : currentDepth + 1;
-                    pstmt.setInt(2, currentStep);
-                    pstmt.setInt(3, currentDepth);
+                    pstmt.setInt(2, "WRT".equals(action) ? 0 : currentStep + 1);
+                    pstmt.setInt(3, "WRT".equals(action) ? 0 : currentDepth + 1);
                     pstmt.setString(4, title);
                     pstmt.setString(5, content);
                     pstmt.setString(6, "yeop");
                     resultCnt = pstmt.executeUpdate();
-                    System.out.println("currentRef = " + currentRef);
-                    System.out.println("currentStep = " + currentStep);
-                    System.out.println("currentDepth = " + currentDepth);
-                    System.out.println("title = " + title);
-                    System.out.println("content = " + content);
-                    System.out.println("resultCnt = " + resultCnt);
                     if(resultCnt > 0){
                         message = "SUC_" + action;
                         con.commit();
@@ -210,7 +196,7 @@
                 }
             }
         }catch(Exception e){
-                e.printStackTrace();
+            System.out.println("e.getMessage() : " + e.getMessage());
             }finally{
                 try{
                     if(rs !=null) rs.close();
@@ -226,9 +212,6 @@
         /////
 
         // 결과 값을 json으로 반환
-        json = "{\"message\":" +"\"" + message + "\""+ "}";
-        prw.println(json);
-        prw.close();
+        json.put("message", message);
+        out.println(json);
     %>
-</body>
-</html>
