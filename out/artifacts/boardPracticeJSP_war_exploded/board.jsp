@@ -162,40 +162,21 @@
             let page = $("#page").val();
             let pageSize = $("#pageSize").val();
 
-            // ajax로 가져온 message에 따라 분기 처리를 위한 함수
-            let message_proc = function(message){
-                if(message == ""){
-                    alert("잘못된 접근입니다.");
-                    location.href="./home.jsp";
-                }
-                const action_type = {
-                    "WRT" : "등록",
-                    "MOD" : "수정",
-                    "DEL" : "삭제",
-                    "REP" : "답글 등록"
-                }
-                // ERR_NoBoard -> NoBoard
-                const code_name = message.substring(4);
-                // ERR_NoBoard -> ERR
-                const code_type = message.substring(0, 3);
+            const action_type = {
+                "WRT" : "등록",
+                "MOD" : "수정",
+                "DEL" : "삭제",
+                "REP" : "답글 등록"
+            }
 
-                if(code_type == "SUC"){
-                    alert("성공적으로 " + action_type[code_name] + "되었습니다.");
-                    if(code_name!="MOD"){
-                        location.href="./list.jsp?page=" + page + "&pageSize=" + pageSize;
-                    }
-                }else{
-                    if(code_name == "NoBoard"){
-                        alert("존재하지 않는 게시물입니다.");
-                        location.href="./list.jsp?page=" + page + "&pageSize=" + pageSize;
-                    }else if(code_name == "Path"){
-                        alert("올바른 경로로 접근하세요.");
-                        location.href="./home.jsp";
-                    }else if(code_name == "HaveRep"){
-                        alert("답글이 있는 경우 삭제할 수 없습니다.");
-                    }else{
-                        alert(action_type[code_name] + "도중 에러가 발생하였습니다.");
-                    }
+            // ajax로 가져온 message에 따라 분기 처리를 위한 함수
+            let message_proc = function(json){
+                console.log(json);
+                alert(json.result == "SUC" ? "성공적으로 " + action_type[json.action] + " 되었습니다." : json.message);
+                if(json.path == "list") {
+                    location.href= "list.jsp?page=" + page + "&pageSize="+pageSize;
+                }else if(json.path == "home"){
+                    location.href="home.jsp";
                 }
             }
 
@@ -225,10 +206,11 @@
                     data : json_data,
                     dataType : "JSON",
                     success : function(result){
-                        message_proc(result.message);
+                        console.log(result);
+                        message_proc(result);
                     },
-                    error: function(){
-                        alert("알 수 없는 오류가 발생하였습니다.");
+                    error: function(request){
+                        message_proc(request.responseJSON);
                     }
                 });
             })
@@ -249,10 +231,10 @@
                         },
                         dataType : "JSON",
                         success : function(result){
-                            message_proc(result.message);
+                            message_proc(result);
                         },
-                        error: function(){
-                            alert("알 수 없는 오류가 발생하였습니다.");
+                        error: function(request){
+                            message_proc(request.responseJSON);
                         }
                     });
                 }

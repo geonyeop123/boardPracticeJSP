@@ -49,7 +49,7 @@
         int bno = 0;
         String title = null;
         String content = null;
-        String message = "";
+        boolean error_flag = false;
         int currentRef = 0;
         int currentStep = 0;
         int currentDepth = 0;
@@ -62,6 +62,42 @@
         JSONObject json = new JSONObject();
         response.setContentType("application/json;charset=utf-8");
 
+        class BoardException extends RuntimeException{
+            private String path = "";
+            private String alertMessage = "";
+            private int status = 503;
+
+            BoardException(String cause){
+                if("Path".equals(cause)){
+                    alertMessage = "올바른 경로로 접근하세요.";
+                    path = "home";
+                    status = 401;
+                }else if("NoBoard".equals(cause)){
+                    alertMessage = "존재하지 않는 게시물입니다.";
+                    status = 406;
+                    path = "list";
+                }else if("HaveRep".equals(cause)){
+                    alertMessage = "댓글이 있는 게시물은 삭제할 수 없습니다.";
+                    status = 406;
+                    path = "board";
+                }
+
+            }
+            BoardException(){}
+
+            public String getAlertMessage(){
+                return alertMessage;
+            }
+
+            public String getPath(){
+                return path;
+            }
+
+            public int getStatus(){
+                return status;
+            }
+        }
+
         /////
         /// 유효성 검사
         /////
@@ -71,16 +107,15 @@
             con.setAutoCommit(false);
             // action 값 검사
             if (!Arrays.asList(actions).contains(request.getParameter("action"))) {
-                throw new Exception("ERR_Path");
+                throw new BoardException("Path");
             } else {
                 action = request.getParameter("action");
-                System.out.println(action);
             }
             // bno 값 검사
             if (!"WRT".equals(action)) {
                 bno = intCheck(request.getParameter("bno"), -1);
                 if (bno < 0) {
-                    message = "ERR_Path";
+                    throw new BoardException("Path");
                 } else {
                     SQL = "SELECT ref, step, depth " +
                             "FROM TBL_BOARD " +
@@ -91,7 +126,7 @@
                     pstmt.clearParameters();
                     // 해당 게시물이 없는 경우 에러 담기
                     if (!rs.next()) {
-                        message = "ERR_NoBoard";
+                        throw new BoardException("NoBoard");
                     // 있는 경우 게시물 정보 담기
                     } else {
                         currentRef = rs.getInt(1);
@@ -112,91 +147,92 @@
             if (!"DEL".equals(action)) {
                 title = request.getParameter("title");
                 content = request.getParameter("content");
-                if (title == null || content == null) message = "ERR_Path";
+                if (title == null || content == null) throw new BoardException("Path");
             }
 
             /////
             /// 로직
             /////
 
-            if ("".equals(message)) {
-                // 수정인 경우
-                if ("MOD".equals(action)) {
-                    SQL = "UPDATE TBL_BOARD SET title = ?, content = ? \n" +
+            // 수정인 경우
+            if ("MOD".equals(action)) {
+                SQL = "UPDATE TBL_BOARD SET title = ?, content = ? \n" +
+                        "WHERE bno = ?";
+                pstmt = con.prepareStatement(SQL);
+                pstmt.setString(1, title);
+                pstmt.setString(2, content);
+                pstmt.setInt(3, bno);
+                resultCnt = pstmt.executeUpdate();
+                if(resultCnt > 0){
+                    con.commit();
+                }else{
+                    con.rollback();
+                    throw new BoardException(action);
+                }
+            // 삭제인 경우
+            } else if ("DEL".equals(action)) {
+                SQL = "SELECT count(*) "  +
+                        "FROM tbl_board " +
+                        "WHERE ref = ? "  +
+                        "AND step > ? "   +
+                        "AND depth = ? ";
+                pstmt = con.prepareStatement(SQL);
+                pstmt.setInt(1, currentRef);
+                pstmt.setInt(2, currentStep);
+                pstmt.setInt(3, currentDepth + 1);
+                rs = pstmt.executeQuery();
+                pstmt.clearParameters();
+                if (rs.next() && (rs.getInt(1) > 0)) {
+                    con.rollback();
+                    throw new BoardException("HaveRep");
+                } else {
+                    SQL = "UPDATE TBL_BOARD SET blind_yn = 'Y' \n" +
                             "WHERE bno = ?";
                     pstmt = con.prepareStatement(SQL);
-                    pstmt.setString(1, title);
-                    pstmt.setString(2, content);
-                    pstmt.setInt(3, bno);
+                    pstmt.setInt(1, bno);
                     resultCnt = pstmt.executeUpdate();
-                    if(resultCnt > 0){
-                        message = "SUC_MOD";
-                        con.commit();
-                    }else{
-                        message = "ERR_MOD";
+                    if (resultCnt < 0) {
                         con.rollback();
-                    }
-                // 삭제인 경우
-                } else if ("DEL".equals(action)) {
-                    SQL = "SELECT count(*) "  +
-                            "FROM tbl_board " +
-                            "WHERE ref = ? "  +
-                            "AND step > ? "   +
-                            "AND depth = ? ";
-                    pstmt = con.prepareStatement(SQL);
-                    pstmt.setInt(1, currentRef);
-                    pstmt.setInt(2, currentStep);
-                    pstmt.setInt(3, currentDepth + 1);
-                    rs = pstmt.executeQuery();
-                    pstmt.clearParameters();
-                    if (rs.next() && (rs.getInt(1) > 0)) {
-                        message = "ERR_HaveRep";
-                        con.rollback();
+                        throw new BoardException(action);
                     } else {
-                        SQL = "UPDATE TBL_BOARD SET blind_yn = 'Y' \n" +
-                                "WHERE bno = ?";
+                        SQL = "UPDATE TBL_BOARD SET depth = depth - 1 " +
+                                "WHERE ref = ? " +
+                                "AND depth > ? " +
+                                "AND blind_yn = 'N'";
                         pstmt = con.prepareStatement(SQL);
-                        pstmt.setInt(1, bno);
-                        resultCnt = pstmt.executeUpdate();
-                        if (resultCnt < 0) {
-                            message = "ERR_DEL";
-                            con.rollback();
-                        } else {
-                            SQL = "UPDATE TBL_BOARD SET depth = depth - 1 " +
-                                    "WHERE ref = ? " +
-                                    "AND depth > ? " +
-                                    "AND blind_yn = 'N'";
-                            pstmt = con.prepareStatement(SQL);
-                            pstmt.setInt(1, currentRef);
-                            pstmt.setInt(2, currentDepth);
-                            pstmt.executeUpdate();
-                            message = "SUC_DEL";
-                            con.commit();
-                        }
-                    }
-                // WRT, REP 인 경우
-                } else {
-                    SQL = "INSERT INTO TBL_BOARD(ref, step, depth, title, content, writer) " +
-                            "VALUES( ?, ?, ?, ?, ?, ?)";
-                    pstmt = con.prepareStatement(SQL);
-                    pstmt.setInt(1, currentRef);
-                    pstmt.setInt(2, "WRT".equals(action) ? 0 : currentStep + 1);
-                    pstmt.setInt(3, "WRT".equals(action) ? 0 : currentDepth + 1);
-                    pstmt.setString(4, title);
-                    pstmt.setString(5, content);
-                    pstmt.setString(6, "yeop");
-                    resultCnt = pstmt.executeUpdate();
-                    if(resultCnt > 0){
-                        message = "SUC_" + action;
+                        pstmt.setInt(1, currentRef);
+                        pstmt.setInt(2, currentDepth);
+                        pstmt.executeUpdate();
                         con.commit();
-                    }else{
-                        message = "ERR_" + action;
-                        con.rollback();
                     }
                 }
+            // WRT, REP 인 경우
+            } else {
+                SQL = "INSERT INTO TBL_BOARD(ref, step, depth, title, content, writer) " +
+                        "VALUES( ?, ?, ?, ?, ?, ?)";
+                pstmt = con.prepareStatement(SQL);
+                pstmt.setInt(1, currentRef);
+                pstmt.setInt(2, "WRT".equals(action) ? 0 : currentStep + 1);
+                pstmt.setInt(3, "WRT".equals(action) ? 0 : currentDepth + 1);
+                pstmt.setString(4, title);
+                pstmt.setString(5, content);
+                pstmt.setString(6, "yeop");
+                resultCnt = pstmt.executeUpdate();
+                if(resultCnt > 0){
+                    con.commit();
+                }else{
+                    con.rollback();
+                    throw new BoardException(action);
+                }
             }
-        }catch(Exception e){
-            System.out.println("e.getMessage() : " + e.getMessage());
+        }catch(BoardException be){
+            json.put("result", "ERROR");
+            json.put("message", be.getAlertMessage());
+            json.put("path", be.getPath());
+            response.setStatus(be.status);
+            error_flag = true;
+        } catch(Exception e){
+            e.printStackTrace();
             }finally{
                 try{
                     if(rs !=null) rs.close();
@@ -210,8 +246,10 @@
         /////
         /// 반환
         /////
-
-        // 결과 값을 json으로 반환
-        json.put("message", message);
+        if(!error_flag){
+            json.put("result", "SUC");
+            json.put("action", action);
+            json.put("path", "MOD".equals(action) ? "board" : "list");
+        }
         out.println(json);
     %>
