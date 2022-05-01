@@ -2,7 +2,8 @@
 <%@ page import="java.sql.PreparedStatement" %>
 <%@ page import="java.sql.Connection" %>
 <%@ page import="java.sql.ResultSet" %>
-<%@ page import="java.sql.DriverManager" %><%--
+<%@ page import="java.sql.DriverManager" %>
+<%@ page import="java.io.PrintWriter" %><%--
   Created by IntelliJ IDEA.
   User: yeop
   Date: 2022/04/09
@@ -27,6 +28,18 @@
             }catch(NumberFormatException e){
                 return defaultInt;
             }
+        }
+
+        public void errorProc(PrintWriter pwr, String cause){
+            pwr.println("<script>");
+            if("Path".equals(cause)){
+                pwr.println("alert('올바른 경로로 접근하세요.')");
+                pwr.println("location.href='home.jsp'");
+            }else if("NoBoard".equals(cause)){
+                pwr.println("alert('게시물이 존재하지 않습니다.')");
+                pwr.println("history.back()");
+            }
+            pwr.println("</script>");
         }
     %>
     <%
@@ -56,12 +69,12 @@
 
         // html
         String titleHTML = "";
+        PrintWriter pwr = response.getWriter();
 
         // action값이 안들어오면 WRT로 세팅
         action = (request.getParameter("action") == null) ? "WRT" : request.getParameter("action");
-        System.out.println(action);
         if(!Arrays.asList(actions).contains(action)){
-            message = "ERR_Path";
+            errorProc(pwr, "Path");
         }else{
             titleHTML = "MOD".equals(action) ? "글 수정" : "글 작성";
             // page, pageSize가 없거나 다른 값으로 들어온 경우 1, 10으로 세팅
@@ -71,7 +84,9 @@
             // WRT가 아닌 경우 bno 값 세팅, bno를 받지 않았다면 튕구기
             if(!"WRT".equals(action)){
                 bno = intCheck(request.getParameter("bno"), -1);
-                if(bno < 0) message="ERR_Path";
+                if(bno < 0){
+                    errorProc(pwr, "Path");
+                };
             }
             // action이 MOD인 경우 해당 bno가 있는지 확인
             if("MOD".equals(action)){
@@ -88,10 +103,18 @@
                         title = rs.getString(1);
                         content = rs.getString(2);
                     }else{
-                        message = "ERR_NoBoard";
+                        errorProc(pwr, "NoBoard");
                     }
                 }catch(Exception e){
                     e.printStackTrace();
+                }finally{
+                    try{
+                        if(rs !=null) rs.close();
+                        if(pstmt !=null) pstmt.close();
+                        if(con !=null) con.close();
+                    }catch(Exception e){
+                        e.printStackTrace();
+                    }
                 }
             }
         }
@@ -141,19 +164,7 @@
         </form>
     </div>
     <script>
-        this_message = "<%=message%>";
-        // 만일 해당 페이지에서 오류가 발생하면 처리
-        if(this_message != null){
-            if(this_message == "ERR_Path"){
-                alert("올바른 경로로 접근하세요.");
-                location.href="./home.jsp";
-            }else if(this_message == "ERR_NoBoard"){
-                alert("존재하지 않는 게시물입니다.");
-                location.href="./list.jsp?page=<%=pag2%>&pageSize=<%=pageSize%>";
-            }
-        }
         $(window).load(()=>{
-            console.log("window loading");
             $('#load').hide();
         })
         $(document).ready(function(){
@@ -167,6 +178,7 @@
             let action = $("#action").val();
             let page = $("#page").val();
             let pageSize = $("#pageSize").val();
+            let loading_flag = false;
 
             const action_type = {
                 "WRT" : "등록",
@@ -186,6 +198,7 @@
             }
 
             $("#write").on("click", function(){
+                if(loading_flag) return;
                 // 유효성 검사
                 title = $("#title").val().trim();
                 content = $("#content").val().trim();
@@ -204,18 +217,19 @@
                     bno = $("#bno").val();
                     json_data.bno = bno;
                 }
-                // ajax를 sync로 전송하기 때문에, 미리 loading bar 보이기
-                $("#load").show();
-                setTimeout(()=>{
                     $.ajax({
                         type : 'POST',
                         url : 'proc.jsp',
                         header : {"content-type" : "application/json"},
                         data : json_data,
                         dataType : "JSON",
-                        async : false,
+                        beforeSend : function(){
+                            $("#load").show();
+                            loading_flag = true;
+                        },
                         complete : function(){
                             $("#load").hide();
+                            loading_flag = false;
                         },
                         success : function(result){
                             message_proc(result);
@@ -224,18 +238,16 @@
                             message_proc(request.responseJSON);
                         },
                     });
-                }, 1);
             })
 
             $("#list").on("click", function(){
+                if(loading_flag) return;
                 location.href='./list.jsp?page=' + page + '&pageSize=' + pageSize;
             })
 
             $("#delete").on("click", function(){
+                if(loading_flag) return;
                 if(confirm("정말로 삭제하시겠습니까?")){
-                    // ajax를 sync로 전송하기 때문에, 미리 loading bar 보이기
-                    $("#load").show();
-                    setTimeout(()=>{
                         $.ajax({
                             type : 'POST',
                             url : 'proc.jsp',
@@ -245,9 +257,13 @@
                                 bno : bno
                             },
                             dataType : "JSON",
-                            async : false,
+                            beforeSend : function(){
+                                $("#load").show();
+                                loading_flag = true;
+                            },
                             complete : function(){
-                                $('#load').hide();
+                                $("#load").hide();
+                                loading_flag = false;
                             },
                             success : function(result){
                                 message_proc(result);
@@ -256,23 +272,14 @@
                                 message_proc(request.responseJSON);
                             },
                         });
-                    }, 1);
                 }
             })
 
             $("#reply").on("click", function(){
+                if(loading_flag) return;
                 location.href="./board.jsp?page="+page+"&pageSize="+pageSize+"&bno="+bno+"&action=REP";
             })
         })
     </script>
-    <%
-        try{
-            if(rs !=null) rs.close();
-            if(pstmt !=null) pstmt.close();
-            if(con !=null) con.close();
-        }catch(Exception e){
-            e.printStackTrace();
-        }
-    %>
 </body>
 </html>

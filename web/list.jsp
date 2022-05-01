@@ -169,7 +169,7 @@
                             }
                         %>
                         <% if(next){ %>
-                        <a class="arrow next" href="./list.jsp?page=<%=endPage - 1%>&pageSize=<%=pageSize%>">&gt;</a>
+                        <a class="arrow next" href="./list.jsp?page=<%=endPage + 1%>&pageSize=<%=pageSize%>">&gt;</a>
                         <% }%>
                     </div>
                 </div>

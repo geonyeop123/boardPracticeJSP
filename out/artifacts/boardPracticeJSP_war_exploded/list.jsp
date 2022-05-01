@@ -98,6 +98,9 @@
     <script src="https://code.jquery.com/jquery-1.11.3.js"></script>
 </head>
 <body>
+    <div id="load">
+        <img src="/static/img/loading.gif" alt="loading">
+    </div>
     <div class="header">
         <div class="logo">LOGO</div>
         <div class="navi">
@@ -166,7 +169,7 @@
                             }
                         %>
                         <% if(next){ %>
-                        <a class="arrow next" href="./list.jsp?page=<%=endPage - 1%>&pageSize=<%=pageSize%>">&gt;</a>
+                        <a class="arrow next" href="./list.jsp?page=<%=endPage + 1%>&pageSize=<%=pageSize%>">&gt;</a>
                         <% }%>
                     </div>
                 </div>
@@ -210,6 +213,9 @@
         }
     %>
     <script>
+        $(window).load(()=>{
+            $('#load').hide();
+        })
         $(document).ready(function(){
             $("#write_btn").on("click",function(){
                 location.href='./board.jsp?page=<%=pag2%>&pageSize=<%=pageSize%>&action=WRT';

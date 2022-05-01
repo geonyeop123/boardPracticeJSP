@@ -250,8 +250,6 @@
         /////
         /// 반환
         /////
-        // loading bar 작동 확인용
-        Thread.sleep(500);
         if(!error_flag){
             json.put("result", "SUC");
             json.put("action", action);

@@ -250,7 +250,6 @@
         /////
         /// 반환
         /////
-        Thread.sleep(2000);
         if(!error_flag){
             json.put("result", "SUC");
             json.put("action", action);
