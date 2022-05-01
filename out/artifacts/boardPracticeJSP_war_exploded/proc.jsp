@@ -171,6 +171,7 @@
                 }
             // 삭제인 경우
             } else if ("DEL".equals(action)) {
+                // 답글이 있는 게시물인지 확인
                 SQL = "SELECT count(*) "  +
                         "FROM tbl_board " +
                         "WHERE ref = ? "  +
@@ -185,6 +186,7 @@
                 if (rs.next() && (rs.getInt(1) > 0)) {
                     con.rollback();
                     throw new BoardException("HaveRep");
+                // 답글이 없는 경우 삭제 진행
                 } else {
                     SQL = "UPDATE TBL_BOARD SET blind_yn = 'Y' \n" +
                             "WHERE bno = ?";
@@ -194,6 +196,7 @@
                     if (resultCnt < 0) {
                         con.rollback();
                         throw new BoardException(action);
+                    // 해당 게시물 삭제 후 해당 게시물보다 아래에 표시된 게시물의 Depth를 1씩 감소
                     } else {
                         SQL = "UPDATE TBL_BOARD SET depth = depth - 1 " +
                                 "WHERE ref = ? " +
@@ -225,6 +228,7 @@
                     throw new BoardException(action);
                 }
             }
+        // 에러 발생 시 에러를 위한 JSON 객체 생성
         }catch(BoardException be){
             json.put("result", "ERROR");
             json.put("message", be.getAlertMessage());
@@ -246,6 +250,7 @@
         /////
         /// 반환
         /////
+        Thread.sleep(2000);
         if(!error_flag){
             json.put("result", "SUC");
             json.put("action", action);

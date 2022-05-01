@@ -92,10 +92,21 @@
                     }
                 }catch(Exception e){
                     e.printStackTrace();
+                }finally{
+                    try{
+                        if(rs !=null) rs.close();
+                        if(pstmt !=null) pstmt.close();
+                        if(con !=null) con.close();
+                    }catch(Exception e){
+                        e.printStackTrace();
+                    }
                 }
             }
         }
     %>
+    <div id="load">
+        <img src="/static/img/loading.gif" alt="loading">
+    </div>
     <div class="header">
         <div class="logo">LOGO</div>
         <div class="navi">
@@ -145,11 +156,13 @@
                 alert("올바른 경로로 접근하세요.");
                 location.href="./home.jsp";
             }else if(this_message == "ERR_NoBoard"){
-                console.log("hi");
                 alert("존재하지 않는 게시물입니다.");
                 location.href="./list.jsp?page=<%=pag2%>&pageSize=<%=pageSize%>";
             }
         }
+        $(window).load(()=>{
+            $('#load').hide();
+        })
         $(document).ready(function(){
             /////
             // 선언
@@ -171,7 +184,6 @@
 
             // ajax로 가져온 message에 따라 분기 처리를 위한 함수
             let message_proc = function(json){
-                console.log(json);
                 alert(json.result == "SUC" ? "성공적으로 " + action_type[json.action] + " 되었습니다." : json.message);
                 if(json.path == "list") {
                     location.href= "list.jsp?page=" + page + "&pageSize="+pageSize;
@@ -199,20 +211,27 @@
                     bno = $("#bno").val();
                     json_data.bno = bno;
                 }
-                $.ajax({
-                    type : 'POST',
-                    url : 'proc.jsp',
-                    header : {"content-type" : "application/json"},
-                    data : json_data,
-                    dataType : "JSON",
-                    success : function(result){
-                        console.log(result);
-                        message_proc(result);
-                    },
-                    error: function(request){
-                        message_proc(request.responseJSON);
-                    }
-                });
+                // ajax를 sync로 전송하기 때문에, 미리 loading bar 보이기
+                $("#load").show();
+                setTimeout(()=>{
+                    $.ajax({
+                        type : 'POST',
+                        url : 'proc.jsp',
+                        header : {"content-type" : "application/json"},
+                        data : json_data,
+                        dataType : "JSON",
+                        async : false,
+                        complete : function(){
+                            $("#load").hide();
+                        },
+                        success : function(result){
+                            message_proc(result);
+                        },
+                        error: function(request){
+                            message_proc(request.responseJSON);
+                        },
+                    });
+                }, 1);
             })
 
             $("#list").on("click", function(){
@@ -221,22 +240,31 @@
 
             $("#delete").on("click", function(){
                 if(confirm("정말로 삭제하시겠습니까?")){
-                    $.ajax({
-                        type : 'POST',
-                        url : 'proc.jsp',
-                        header : {"content-type" : "application/json"},
-                        data : {
-                            action : 'DEL',
-                            bno : bno
-                        },
-                        dataType : "JSON",
-                        success : function(result){
-                            message_proc(result);
-                        },
-                        error: function(request){
-                            message_proc(request.responseJSON);
-                        }
-                    });
+                    // ajax를 sync로 전송하기 때문에, 미리 loading bar 보이기
+                    $("#load").show();
+                    // timeout을 1초를 안걸면 위의 show가 작동을 안함 왜 why?????
+                    setTimeout(()=>{
+                        $.ajax({
+                            type : 'POST',
+                            url : 'proc.jsp',
+                            header : {"content-type" : "application/json"},
+                            data : {
+                                action : 'DEL',
+                                bno : bno
+                            },
+                            dataType : "JSON",
+                            async : false,
+                            complete : function(){
+                                $('#load').hide();
+                            },
+                            success : function(result){
+                                message_proc(result);
+                            },
+                            error: function(request){
+                                message_proc(request.responseJSON);
+                            },
+                        });
+                    }, 1);
                 }
             })
 
@@ -245,14 +273,5 @@
             })
         })
     </script>
-    <%
-        try{
-            if(rs !=null) rs.close();
-            if(pstmt !=null) pstmt.close();
-            if(con !=null) con.close();
-        }catch(Exception e){
-            e.printStackTrace();
-        }
-    %>
 </body>
 </html>
