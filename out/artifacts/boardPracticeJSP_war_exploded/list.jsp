@@ -13,9 +13,6 @@
 <%!
     // 해당 값이 int인지 체크해서 기본 값 반환
     public int intCheck(String s, int defaultInt){
-        if("".equals(s) || s == null){
-            return defaultInt;
-        }
         try{
             return Integer.parseInt(s);
         }catch(NumberFormatException e){
@@ -31,8 +28,8 @@
     final String DRIVER = "com.mysql.cj.jdbc.Driver";
     final String URL = "jdbc:mysql://127.0.0.1:3306/book_ex?useSSL=false";
     final String USER = "root";
-    final String PW = "rjsduq!1";
-//    final String PW = "1234";
+//    final String PW = "rjsduq!1";
+    final String PW = "1234";
     Connection con = null;
     PreparedStatement pstmt = null;
     ResultSet rs = null;
@@ -161,7 +158,7 @@
                 <div class="page_wrap">
                     <div class="page_nation">
                         <% if(prev){ %>
-                        <a class="arrow prev" href="./list.jsp?page=<%=startPage - 1%>&pageSize=<%=pageSize%>">&lt;</a>
+                        <a class="arrow prev" href="./list.jsp?page=<%=startPage - 1%>&pageSize=<%=pageSize%>">&lt</a>
                         <% }%>
                         <% for(int i = startPage; i <= endPage; i++){%>
                         <a class="<%=(i == pag2) ? "active" : "" %>" href="./list.jsp?page=<%=i%>&pageSize=<%=pageSize%>"><%=i%></a>
@@ -169,7 +166,7 @@
                             }
                         %>
                         <% if(next){ %>
-                        <a class="arrow next" href="./list.jsp?page=<%=endPage + 1%>&pageSize=<%=pageSize%>">&gt;</a>
+                        <a class="arrow next" href="./list.jsp?page=<%=endPage + 1%>&pageSize=<%=pageSize%>">&gt</a>
                         <% }%>
                     </div>
                 </div>
@@ -191,8 +188,8 @@
                 <% }%>
                 </tbody>
             </table>
-                    </div>
-                </div>
+            </div>
+        </div>
         </div>
     </div>
     <%
@@ -213,10 +210,8 @@
         }
     %>
     <script>
-        $(window).load(()=>{
-            $('#load').hide();
-        })
         $(document).ready(function(){
+            $('#load').hide();
             $("#write_btn").on("click",function(){
                 location.href='./board.jsp?page=<%=pag2%>&pageSize=<%=pageSize%>&action=WRT';
             })

@@ -33,8 +33,8 @@
         final String DRIVER = "com.mysql.cj.jdbc.Driver";
         final String URL = "jdbc:mysql://127.0.0.1:3306/book_ex?useSSL=false";
         final String USER = "root";
-        final String PW = "rjsduq!1";
-//        final String PW = "1234";
+//        final String PW = "rjsduq!1";
+        final String PW = "1234";
 
         // DB
         Connection con = null;
@@ -42,6 +42,7 @@
         ResultSet rs = null;
         String SQL = null;
         int resultCnt = 0;
+
 
         // VO
         String[] actions = {"WRT", "MOD", "DEL", "REP"};
@@ -111,43 +112,42 @@
             } else {
                 action = request.getParameter("action");
             }
+
             // bno 값 검사
             if (!"WRT".equals(action)) {
                 bno = intCheck(request.getParameter("bno"), -1);
-                if (bno < 0) {
-                    throw new BoardException("Path");
-                } else {
-                    SQL = "SELECT ref, step, depth " +
-                            "FROM TBL_BOARD " +
-                            "WHERE blind_yn = 'N' " +
-                            "AND bno = " + bno;
-                    pstmt = con.prepareStatement(SQL);
-                    rs = pstmt.executeQuery();
-                    pstmt.clearParameters();
-                    // 해당 게시물이 없는 경우 에러 담기
-                    if (!rs.next()) {
-                        throw new BoardException("NoBoard");
-                    // 있는 경우 게시물 정보 담기
-                    } else {
-                        currentRef = rs.getInt(1);
-                        currentStep = rs.getInt(2);
-                        currentDepth = rs.getInt(3);
-                    }
+                if (bno < 0) throw new BoardException("Path");
+            }
+            // current board 정보 가져오기
+            SQL = !"WRT".equals(action)
+                    ? "SELECT ref, step, depth " +
+                    "FROM TBL_BOARD " +
+                    "WHERE blind_yn = 'N' " +
+                    "AND bno = " + bno
+                    // WRT일 경우 ref 값 세팅
+                    : "SELECT IFNULL(MAX(ref), 0)+1 FROM TBL_BOARD B";
+
+            pstmt = con.prepareStatement(SQL);
+            rs = pstmt.executeQuery();
+            pstmt.clearParameters();
+
+            if (rs.next()) {
+                currentRef = rs.getInt(1);
+                // WRT가 아닌 경우에 board 정보 담기
+                if(!"WRT".equals(action)){
+                    currentStep = rs.getInt(2);
+                    currentDepth = rs.getInt(3);
                 }
-            // WRT일 경우 쓰일 ref 가져오기
+            // 해당 게시물이 없는 경우 에러 담기
             } else {
-                SQL = "SELECT IFNULL(MAX(ref), 0)+1 FROM TBL_BOARD B";
-                pstmt = con.prepareStatement(SQL);
-                rs = pstmt.executeQuery();
-                if (rs.next()) currentRef = rs.getInt(1);
-                pstmt.clearParameters();
+                throw new BoardException("NoBoard");
             }
 
             // title, content 값 검사
             if (!"DEL".equals(action)) {
-                title = request.getParameter("title");
-                content = request.getParameter("content");
-                if (title == null || content == null) throw new BoardException("Path");
+                title = (null == request.getParameter("title")) ? "" : request.getParameter("title");
+                content = (null == request.getParameter("content")) ? "" : request.getParameter("content");
+                if ("".equals(title) || "".equals(content)) throw new BoardException("Path");
             }
 
             /////
@@ -156,8 +156,14 @@
 
             // 수정인 경우
             if ("MOD".equals(action)) {
-                SQL = "UPDATE TBL_BOARD SET title = ?, content = ? \n" +
-                        "WHERE bno = ?";
+                SQL = "UPDATE " +
+                        "   TBL_BOARD " +
+                        "SET " +
+                        "   title = ? " +
+                        "    , content = ? " +
+                        "WHERE " +
+                        "   bno = ?";
+
                 pstmt = con.prepareStatement(SQL);
                 pstmt.setString(1, title);
                 pstmt.setString(2, content);
@@ -176,13 +182,16 @@
                         "FROM tbl_board " +
                         "WHERE ref = ? "  +
                         "AND step > ? "   +
-                        "AND depth = ? ";
+                        "AND depth = ? "  +
+                        "AND blind_yn = 'N' ";
                 pstmt = con.prepareStatement(SQL);
                 pstmt.setInt(1, currentRef);
                 pstmt.setInt(2, currentStep);
                 pstmt.setInt(3, currentDepth + 1);
                 rs = pstmt.executeQuery();
                 pstmt.clearParameters();
+
+                // 답글 체크
                 if (rs.next() && (rs.getInt(1) > 0)) {
                     con.rollback();
                     throw new BoardException("HaveRep");

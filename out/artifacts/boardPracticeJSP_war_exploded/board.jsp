@@ -22,7 +22,6 @@
     <%!
         // parameter를 받아 int를 반환
         public int intCheck(String s, int defaultInt){
-            if("".equals(s) || s == null) return defaultInt;
             try{
                 return Integer.parseInt(s);
             }catch(NumberFormatException e){
@@ -44,35 +43,34 @@
     %>
     <%
         /////
-        // 선
+        // 선언
         /////
         // DB
         final String DRIVER = "com.mysql.cj.jdbc.Driver";
         final String URL = "jdbc:mysql://127.0.0.1:3306/book_ex?useSSL=false";
         final String USER = "root";
-        final String PW = "rjsduq!1";
-//        final String PW = "1234";
+//        final String PW = "rjsduq!1";
+        final String PW = "1234";
         Connection con = null;
         PreparedStatement pstmt = null;
         ResultSet rs = null;
         String SQL = null;
 
         // VO
-        String[] actions = {"WRT", "MOD", "DEL", "REP", ""};
+        String[] actions = {"WRT", "MOD", "DEL", "REP"};
         int pag2 = 0;
         int pageSize = 0;
         String action = "";
         int bno = 0;
         String title = "";
         String content = "";
-        String message = null;
 
         // html
         String titleHTML = "";
         PrintWriter pwr = response.getWriter();
 
         // action값이 안들어오면 WRT로 세팅
-        action = (request.getParameter("action") == null) ? "WRT" : request.getParameter("action");
+        action = (request.getParameter("action") == null || "".equals(request.getParameter("action"))) ? "WRT" : request.getParameter("action");
         if(!Arrays.asList(actions).contains(action)){
             errorProc(pwr, "Path");
         }else{
@@ -80,7 +78,6 @@
             // page, pageSize가 없거나 다른 값으로 들어온 경우 1, 10으로 세팅
             pag2 = intCheck(request.getParameter("page"), 1);
             pageSize = intCheck(request.getParameter("pageSize"), 10);
-
             // WRT가 아닌 경우 bno 값 세팅, bno를 받지 않았다면 튕구기
             if(!"WRT".equals(action)){
                 bno = intCheck(request.getParameter("bno"), -1);
@@ -106,6 +103,10 @@
                         errorProc(pwr, "NoBoard");
                     }
                 }catch(Exception e){
+                    pwr.println("<script>");
+                    pwr.println("alert('에러가 발생했습니다')");
+                    pwr.println("location.href='error.jsp'");
+                    pwr.println("</script>");
                     e.printStackTrace();
                 }finally{
                     try{
@@ -164,9 +165,6 @@
         </form>
     </div>
     <script>
-        $(window).load(()=>{
-            $('#load').hide();
-        })
         $(document).ready(function(){
             /////
             // 선언
@@ -179,7 +177,30 @@
             let page = $("#page").val();
             let pageSize = $("#pageSize").val();
             let loading_flag = false;
-
+            let json_data = {};
+            let ajax = function(json){
+                $.ajax({
+                    type : 'POST',
+                    url : 'proc.jsp',
+                    header : {"content-type" : "application/json"},
+                    data : json,
+                    dataType : "JSON",
+                    beforeSend : function(){
+                        $("#load").show();
+                        loading_flag = true;
+                    },
+                    complete : function(){
+                        $("#load").hide();
+                        loading_flag = false;
+                    },
+                    success : function(result){
+                        message_proc(result);
+                    },
+                    error: function(request){
+                        message_proc(request.responseJSON);
+                    },
+                });
+            }
             const action_type = {
                 "WRT" : "등록",
                 "MOD" : "수정",
@@ -197,6 +218,10 @@
                 }
             }
 
+            // ###
+            // # 이벤트
+            // ###
+
             $("#write").on("click", function(){
                 if(loading_flag) return;
                 // 유효성 검사
@@ -210,34 +235,11 @@
                 let json_data = {
                     action : action,
                     title : title,
-                    content : content
+                    content : content,
+                    bno : $("#bno").val(),
                 };
-                // 답글 혹은 수정인 경우 JSON에 bno도 담아주기
-                if(action == "REP" || action=="MOD"){
-                    bno = $("#bno").val();
-                    json_data.bno = bno;
-                }
-                    $.ajax({
-                        type : 'POST',
-                        url : 'proc.jsp',
-                        header : {"content-type" : "application/json"},
-                        data : json_data,
-                        dataType : "JSON",
-                        beforeSend : function(){
-                            $("#load").show();
-                            loading_flag = true;
-                        },
-                        complete : function(){
-                            $("#load").hide();
-                            loading_flag = false;
-                        },
-                        success : function(result){
-                            message_proc(result);
-                        },
-                        error: function(request){
-                            message_proc(request.responseJSON);
-                        },
-                    });
+                // ajax 호출
+                ajax(json_data);
             })
 
             $("#list").on("click", function(){
@@ -248,30 +250,13 @@
             $("#delete").on("click", function(){
                 if(loading_flag) return;
                 if(confirm("정말로 삭제하시겠습니까?")){
-                        $.ajax({
-                            type : 'POST',
-                            url : 'proc.jsp',
-                            header : {"content-type" : "application/json"},
-                            data : {
-                                action : 'DEL',
-                                bno : bno
-                            },
-                            dataType : "JSON",
-                            beforeSend : function(){
-                                $("#load").show();
-                                loading_flag = true;
-                            },
-                            complete : function(){
-                                $("#load").hide();
-                                loading_flag = false;
-                            },
-                            success : function(result){
-                                message_proc(result);
-                            },
-                            error: function(request){
-                                message_proc(request.responseJSON);
-                            },
-                        });
+                    action = 'DEL';
+                    json_data = {
+                        action : action,
+                        bno : bno,
+                    }
+                    // ajax 호출
+                    ajax(json_data);
                 }
             })
 
@@ -279,6 +264,12 @@
                 if(loading_flag) return;
                 location.href="./board.jsp?page="+page+"&pageSize="+pageSize+"&bno="+bno+"&action=REP";
             })
+
+            // ####
+            // # 초기화
+            // ####
+
+            $('#load').hide();
         })
     </script>
 </body>
